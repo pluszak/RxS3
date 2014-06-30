@@ -14,7 +14,9 @@ import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 import pl.codewise.amazon.client.auth.AWSSignatureCalculatorAggregate;
 import pl.codewise.amazon.client.xml.ErrorResponseParser;
+import pl.codewise.amazon.client.xml.GenericResponseParser;
 import pl.codewise.amazon.client.xml.ListResponseParser;
+import pl.codewise.amazon.client.xml.PassThroughParser;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -30,8 +32,8 @@ public class CodewiseS3Client implements Closeable {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(CodewiseS3Client.class);
 
-	private static final String S3_URL = "http://s3.amazonaws.com";
 	private static final String S3_LOCATION = "s3.amazonaws.com";
+	private static final String S3_URL = "http://" + S3_LOCATION;
 
 	private final AmazonS3 client;
 	private final AsyncHttpClient httpClient;
@@ -72,13 +74,7 @@ public class CodewiseS3Client implements Closeable {
 				.setSignatureCalculator(signatureCalculators.getGetSignatureCalculator())
 				.build();
 
-		Response response = retrieveResult(request);
-		if (LOGGER.isDebugEnabled()) {
-			LOGGER.debug("Amazon response to get of object '{}': {}", url, response.getResponseBody());
-		}
-		throwExceptionIfUnsuccessful(response);
-
-		return response.getResponseBodyAsStream();
+		return retrieveResult(request, new PassThroughParser());
 	}
 
 	@SuppressWarnings("UnusedDeclaration")
@@ -99,20 +95,7 @@ public class CodewiseS3Client implements Closeable {
 	}
 
 	public ObjectListing listObjects(String bucketName) throws IOException {
-		String virtualHost = getVirtualHost(bucketName);
-
-		Request request = httpClient.prepareGet(S3_URL)
-				.setVirtualHost(virtualHost)
-				.setSignatureCalculator(signatureCalculators.getListSignatureCalculator())
-				.build();
-
-		Response response = retrieveResult(request);
-		if (LOGGER.isDebugEnabled()) {
-			LOGGER.debug("Amazon response to list objects in bucket '{}': {}", bucketName, response.getResponseBody());
-		}
-		throwExceptionIfUnsuccessful(response);
-
-		return listResponseParser.parse(response.getResponseBodyAsStream());
+		return listObjects(bucketName, null);
 	}
 
 	public ObjectListing listObjects(String bucketName, String prefix) throws IOException {
@@ -124,31 +107,30 @@ public class CodewiseS3Client implements Closeable {
 				.setSignatureCalculator(signatureCalculators.getListSignatureCalculator())
 				.build();
 
-		Response response = retrieveResult(request);
-		if (LOGGER.isDebugEnabled()) {
-			LOGGER.debug("Amazon response to list objects in bucket '{}': {}", bucketName, response.getResponseBody());
-		}
-		throwExceptionIfUnsuccessful(response);
-
-		return listResponseParser.parse(response.getResponseBodyAsStream());
+		return retrieveResult(request, listResponseParser);
 	}
 
 	public ObjectListing listNextBatchOfObjects(ObjectListing objectListing) throws IOException {
-		String virtualHost = getVirtualHost(objectListing.getBucketName());
-		String queryString = createQueryString(objectListing);
+		if (!objectListing.isTruncated()) {
+			ObjectListing emptyListing = new ObjectListing();
+			emptyListing.setBucketName(objectListing.getBucketName());
+			emptyListing.setDelimiter(objectListing.getDelimiter());
+			emptyListing.setMarker(objectListing.getNextMarker());
+			emptyListing.setMaxKeys(objectListing.getMaxKeys());
+			emptyListing.setPrefix(objectListing.getPrefix());
+			emptyListing.setEncodingType(objectListing.getEncodingType());
+			emptyListing.setTruncated(false);
 
-		Request request = httpClient.prepareGet(S3_URL + "/?" + queryString)
-				.setVirtualHost(virtualHost)
-				.setSignatureCalculator(signatureCalculators.getListSignatureCalculator())
-				.build();
-
-		Response response = retrieveResult(request);
-		if (LOGGER.isDebugEnabled()) {
-			LOGGER.debug("Amazon response to list next batch of objects in bucket '{}': {}", queryString, response.getResponseBody());
+			return emptyListing;
 		}
-		throwExceptionIfUnsuccessful(response);
 
-		return listResponseParser.parse(response.getResponseBodyAsStream());
+		return listObjects(new ListObjectsRequest(
+				objectListing.getBucketName(),
+				objectListing.getPrefix(),
+				objectListing.getNextMarker(),
+				objectListing.getDelimiter(),
+				objectListing.getMaxKeys()
+		));
 	}
 
 	public ObjectListing listObjects(ListObjectsRequest listObjectsRequest) throws IOException {
@@ -160,13 +142,7 @@ public class CodewiseS3Client implements Closeable {
 				.setSignatureCalculator(signatureCalculators.getListSignatureCalculator())
 				.build();
 
-		Response response = retrieveResult(request);
-		if (LOGGER.isDebugEnabled()) {
-			LOGGER.debug("Amazon response to list objects '{}': {}", queryString, response.getResponseBody());
-		}
-		throwExceptionIfUnsuccessful(response);
-
-		return listResponseParser.parse(response.getResponseBodyAsStream());
+		return retrieveResult(request, listResponseParser);
 	}
 
 	@Override
@@ -174,6 +150,7 @@ public class CodewiseS3Client implements Closeable {
 		httpClient.close();
 	}
 
+	@SuppressWarnings("UnusedDeclaration")
 	public void deleteObjects(String bucketName, List<S3ObjectSummary> objectSummaries) throws IOException {
 		StringBuilder builder = new StringBuilder();
 		builder.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
@@ -203,7 +180,7 @@ public class CodewiseS3Client implements Closeable {
 				.setBody(bytes)
 				.build();
 
-		retrieveResult(request);
+//		retrieveResult(request);
 	}
 
 	private String getVirtualHost(String bucketName) {
@@ -212,13 +189,25 @@ public class CodewiseS3Client implements Closeable {
 
 	private void throwExceptionIfUnsuccessful(Response response) throws IOException {
 		if (response.getStatusCode() != 200) {
-			throw errorResponseParser.parse(response.getResponseBodyAsStream(), response.getStatusCode());
+			throw errorResponseParser.parse(response).build();
 		}
 	}
 
-	private Response retrieveResult(Request request) throws IOException {
+	private <T> T retrieveResult(Request request, GenericResponseParser<T> responseParser) throws IOException {
 		try {
-			return httpClient.executeRequest(request).get();
+			Response response = httpClient.executeRequest(request, new AsyncCompletionHandler<Response>() {
+				@Override
+				public Response onCompleted(Response response) throws Exception {
+					return response;
+				}
+			}).get();
+
+			if (LOGGER.isDebugEnabled()) {
+				LOGGER.debug("Amazon response '{}'", response.getResponseBody());
+			}
+			throwExceptionIfUnsuccessful(response);
+
+			return responseParser.parse(response);
 		} catch (InterruptedException | ExecutionException e) {
 			throw new IOException(e);
 		}

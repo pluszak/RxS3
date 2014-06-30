@@ -2,6 +2,7 @@ package pl.codewise.amazon.client.xml;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.ning.http.client.Response;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
@@ -12,7 +13,7 @@ import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.Map;
 
-public class GenericResponseParser<Context> {
+public abstract class GenericResponseParser<Context> {
 
 	public static final String INPUT_ENCODING = "UTF-8";
 
@@ -32,7 +33,7 @@ public class GenericResponseParser<Context> {
 		}
 	}
 
-	public void parse(InputStream responseBodyAsStream, Context context) throws IOException {
+	protected void parse(InputStream responseBodyAsStream, Context context) throws IOException {
 		try {
 			XmlPullParser parser = pullParserFactory.newPullParser();
 			parser.setInput(responseBodyAsStream, INPUT_ENCODING);
@@ -42,6 +43,8 @@ public class GenericResponseParser<Context> {
 			throw new IOException(e);
 		}
 	}
+
+	public abstract Context parse(Response response) throws IOException;
 
 	private void processContents(XmlPullParser parser, Context exceptionBuilder) throws XmlPullParserException, IOException {
 		LinkedList<TagHandler<Context>> handlerStack = Lists.newLinkedList();

@@ -1,11 +1,10 @@
 package pl.codewise.amazon.client.xml;
 
-import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.ning.http.client.Response;
 import org.xmlpull.v1.XmlPullParserFactory;
 import pl.codewise.amazon.client.xml.handlers.ErrorTagHandler;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 public class ErrorResponseParser extends GenericResponseParser<AmazonS3ExceptionBuilder> {
 
@@ -13,11 +12,11 @@ public class ErrorResponseParser extends GenericResponseParser<AmazonS3Exception
 		super(pullParserFactory, ErrorTagHandler.UNKNOWN, ErrorTagHandler.values());
 	}
 
-	public AmazonS3Exception parse(InputStream responseBodyAsStream, int statusCode) throws IOException {
+	public AmazonS3ExceptionBuilder parse(Response response) throws IOException {
 		AmazonS3ExceptionBuilder exceptionBuilder = new AmazonS3ExceptionBuilder();
-		exceptionBuilder.setStatusCode(statusCode);
+		exceptionBuilder.setStatusCode(response.getStatusCode());
 
-		parse(responseBodyAsStream, exceptionBuilder);
-		return exceptionBuilder.build();
+		parse(response.getResponseBodyAsStream(), exceptionBuilder);
+		return exceptionBuilder;
 	}
 }
