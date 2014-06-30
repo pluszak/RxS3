@@ -27,21 +27,44 @@ public class ObjectListingAssert extends AbstractAssert<ObjectListingAssert, Obj
 	}
 
 	public ObjectListingAssert isEqualTo(ObjectListing expected) {
-		Assertions.assertThat(actual.getBucketName()).isEqualTo(expected.getBucketName());
-		Assertions.assertThat(actual.getDelimiter()).isEqualTo(expected.getDelimiter());
-		Assertions.assertThat(actual.getMarker()).isEqualTo(expected.getMarker());
-		Assertions.assertThat(actual.getMaxKeys()).isEqualTo(expected.getMaxKeys());
-		Assertions.assertThat(actual.getNextMarker()).isEqualTo(expected.getNextMarker());
-		Assertions.assertThat(actual.getPrefix()).isEqualTo(expected.getPrefix());
+		Assertions.assertThat(actual.getBucketName())
+				.overridingErrorMessage("BucketName mismatch. Expected %s, actual: %s", expected.getBucketName(), actual.getBucketName())
+				.isEqualTo(expected.getBucketName());
 
-		Assertions.assertThat(actual.getCommonPrefixes()).isEqualTo(expected.getCommonPrefixes());
-		Assertions.assertThat(actual.getObjectSummaries()).hasSameSizeAs(expected.getObjectSummaries());
+		Assertions.assertThat(actual.getDelimiter())
+				.overridingErrorMessage("Delimiter mismatch. Expected %s, actual: %s", expected.getDelimiter(), actual.getDelimiter())
+				.isEqualTo(expected.getDelimiter());
+
+		Assertions.assertThat(actual.getMarker())
+				.overridingErrorMessage("Marker mismatch. Expected %s, actual: %s", expected.getMarker(), actual.getMarker())
+				.isEqualTo(expected.getMarker());
+
+		Assertions.assertThat(actual.getMaxKeys())
+				.overridingErrorMessage("MaxKeys mismatch. Expected %s, actual: %s", expected.getMaxKeys(), actual.getMaxKeys())
+				.isEqualTo(expected.getMaxKeys());
+
+		Assertions.assertThat(actual.getNextMarker())
+				.overridingErrorMessage("NextMarker mismatch. Expected %s, actual: %s", expected.getNextMarker(), actual.getNextMarker())
+				.isEqualTo(expected.getNextMarker());
+
+		Assertions.assertThat(actual.getPrefix())
+				.overridingErrorMessage("Prefix mismatch. Expected %s, actual: %s", expected.getPrefix(), actual.getPrefix())
+				.isEqualTo(expected.getPrefix());
+
+		Assertions.assertThat(actual.getCommonPrefixes())
+				.overridingErrorMessage("CommonPrefixes mismatch. Expected %s, actual: %s", expected.getCommonPrefixes(), actual.getCommonPrefixes())
+				.isEqualTo(expected.getCommonPrefixes());
+
+		Assertions.assertThat(actual.getObjectSummaries())
+				.overridingErrorMessage("ObjectSummaries mismatch. Expected %s, actual: %s", expected.getObjectSummaries(), actual.getObjectSummaries())
+				.hasSameSizeAs(expected.getObjectSummaries());
 
 		Iterator<S3ObjectSummary> iterator = actual.getObjectSummaries().iterator();
 		Iterator<S3ObjectSummary> amazonIterator = expected.getObjectSummaries().iterator();
 
 		while (iterator.hasNext()) {
-			Assertions.assertThat(iterator.next()).isEqualToComparingFieldByField(amazonIterator.next());
+			Assertions.assertThat(iterator.next())
+					.isEqualToComparingFieldByField(amazonIterator.next());
 		}
 
 		return this;
