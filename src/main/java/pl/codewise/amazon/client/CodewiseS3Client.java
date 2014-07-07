@@ -21,7 +21,6 @@ import pl.codewise.amazon.client.xml.PassThroughParser;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
@@ -65,6 +64,7 @@ public class CodewiseS3Client implements Closeable {
 		client.putObject(request);
 	}
 
+	@SuppressWarnings("UnusedDeclaration")
 	public InputStream getObject(String bucketName, String location) throws IOException {
 		String virtualHost = getVirtualHost(bucketName);
 		String url = S3_URL + "/" + escape(location);
@@ -174,7 +174,7 @@ public class CodewiseS3Client implements Closeable {
 		String virtualHost = getVirtualHost(bucketName);
 		Request request = httpClient.preparePost(S3_URL + "/?delete")
 				.setVirtualHost(virtualHost)
-				.addHeader("Content-MD5", Base64.getEncoder().encodeToString(digest))
+//				.addHeader("Content-MD5", Base64.getEncoder().encodeToString(digest))
 				.addHeader("Content-Length", "" + bytes.length / 2)
 				.setSignatureCalculator(signatureCalculators.getBulkDeleteSignatureCalculator())
 				.setBody(bytes)
