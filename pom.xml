@@ -12,8 +12,8 @@
 	</prerequisites>
 
 	<properties>
-		<compiler.source.level>1.8</compiler.source.level>
-		<compiler.target.level>1.8</compiler.target.level>
+		<compiler.source.level>1.7</compiler.source.level>
+		<compiler.target.level>1.7</compiler.target.level>
 
 		<slf4j.version>1.7.5</slf4j.version>
 	</properties>
