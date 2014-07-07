@@ -3,14 +3,10 @@ package pl.codewise.amazon.client.xml.handlers;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.Owner;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import org.joda.time.LocalDateTime;
+import org.joda.time.format.DateTimeFormat;
 import org.xmlpull.v1.XmlPullParser;
 
-import java.time.DateTimeException;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -60,20 +56,8 @@ public enum ListObjectsTagHandler implements TagHandler<ObjectListing> {
 			List<S3ObjectSummary> objectSummaries = objectListing.getObjectSummaries();
 			S3ObjectSummary summary = objectSummaries.get(objectSummaries.size() - 1);
 
-			DateTimeFormatter dateTimeFormatter = new DateTimeFormatterBuilder()
-					.parseCaseInsensitive()
-					.append(DateTimeFormatter.ISO_LOCAL_DATE)
-					.appendLiteral('T')
-					.append(DateTimeFormatter.ISO_LOCAL_TIME)
-					.appendZoneId()
-					.toFormatter();
-
-			try {
-				LocalDateTime dateTime = dateTimeFormatter.parse(parser.getText(), LocalDateTime::from);
-				summary.setLastModified(Date.from(dateTime.atZone(ZoneId.of("UTC")).toInstant()));
-			} catch (DateTimeException e) {
-				throw new RuntimeException(parser.getText(), e);
-			}
+			LocalDateTime dateTime = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").parseLocalDateTime(parser.getText());
+			summary.setLastModified(dateTime.toDate());
 		}
 	}, STORAGE_CLASS("StorageClass") {
 		@Override

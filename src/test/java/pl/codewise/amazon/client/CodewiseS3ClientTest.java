@@ -4,15 +4,11 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
-import org.apache.commons.io.IOUtils;
 import org.junit.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -236,53 +232,5 @@ public class CodewiseS3ClientTest {
 
 		// Then
 		ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing).isNotTruncated();
-	}
-
-	@Test
-	public void shouldGetObjects() throws IOException {
-		// Given
-		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		CodewiseS3Client client = new CodewiseS3Client(amazonS3Client, credentials);
-
-		ObjectListing listing = client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/");
-
-		// When
-		List<byte[]> actual = listing
-				.getObjectSummaries()
-				.stream()
-				.map(object -> {
-					try {
-						return client.getObject(bucketName, object.getKey());
-					} catch (Exception e) {
-						throw new RuntimeException(e);
-					}
-				})
-				.map(object -> {
-					try {
-						return IOUtils.toByteArray(object);
-					} catch (IOException e) {
-						throw new UncheckedIOException(e);
-					}
-				})
-				.collect(Collectors.toList());
-
-		List<byte[]> expected = listing
-				.getObjectSummaries()
-				.stream()
-				.map(object -> amazonS3Client.getObject(bucketName, object.getKey()))
-				.map(object -> {
-					try {
-						return IOUtils.toByteArray(object.getObjectContent());
-					} catch (IOException e) {
-						throw new UncheckedIOException(e);
-					}
-				})
-				.collect(Collectors.toList());
-
-		// Then
-		assertThat(actual).hasSameSizeAs(expected);
-		for (int i = 0; i < actual.size(); i++) {
-			assertThat(actual.get(i)).isEqualTo(expected.get(i));
-		}
 	}
 }
