@@ -53,7 +53,10 @@ public abstract class GenericResponseParser<Context> {
 		do {
 			if (eventType == XmlPullParser.START_TAG) {
 				String tagName = parser.getName();
-				TagHandler<Context> tagHandler = tagHandlerMap.getOrDefault(tagName, unknownTagHandler);
+				TagHandler<Context> tagHandler = tagHandlerMap.get(tagName);
+				if (tagHandler == null) {
+					tagHandler = unknownTagHandler;
+				}
 				handlerStack.add(tagHandler);
 
 				tagHandler.handleStart(exceptionBuilder, parser);
