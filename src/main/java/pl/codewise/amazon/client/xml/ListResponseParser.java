@@ -6,6 +6,7 @@ import org.xmlpull.v1.XmlPullParserFactory;
 import pl.codewise.amazon.client.xml.handlers.ListObjectsTagHandler;
 
 import java.io.IOException;
+import java.util.Optional;
 
 public class ListResponseParser extends GenericResponseParser<ObjectListing> {
 
@@ -13,7 +14,7 @@ public class ListResponseParser extends GenericResponseParser<ObjectListing> {
 		super(pullParserFactory, ListObjectsTagHandler.UNKNOWN, ListObjectsTagHandler.values());
 	}
 
-	public ObjectListing parse(Response response) throws IOException {
+	public Optional<ObjectListing> parse(Response response) throws IOException {
 		ObjectListing listing = new ObjectListing();
 		parse(response.getResponseBodyAsStream(), listing);
 
@@ -21,6 +22,6 @@ public class ListResponseParser extends GenericResponseParser<ObjectListing> {
 			listing.setNextMarker(null);
 		}
 
-		return listing;
+		return Optional.of(listing);
 	}
 }

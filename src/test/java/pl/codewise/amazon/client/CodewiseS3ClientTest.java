@@ -4,10 +4,17 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.S3Object;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,7 +48,7 @@ public class CodewiseS3ClientTest {
 	}
 
 	@BeforeClass
-	public void setUpS3Contents() {
+	public void setUpS3Contents() throws IOException {
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
 
 		PL.putToS3(amazonS3Client, bucketName);
@@ -63,7 +70,7 @@ public class CodewiseS3ClientTest {
 	public void shouldListObjectsInBucket() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		CodewiseS3Client client = new CodewiseS3Client(amazonS3Client, credentials);
+		CodewiseS3Client client = new CodewiseS3Client(credentials);
 
 		// When
 		ObjectListing listing = client.listObjects(bucketName);
@@ -77,7 +84,7 @@ public class CodewiseS3ClientTest {
 	public void shouldListObjects() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		CodewiseS3Client client = new CodewiseS3Client(amazonS3Client, credentials);
+		CodewiseS3Client client = new CodewiseS3Client(credentials);
 
 		// When
 		ObjectListing listing = client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/");
@@ -91,7 +98,7 @@ public class CodewiseS3ClientTest {
 	public void shouldListObjectsWhenUsingRequest() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		CodewiseS3Client client = new CodewiseS3Client(amazonS3Client, credentials);
+		CodewiseS3Client client = new CodewiseS3Client(credentials);
 
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
@@ -109,7 +116,7 @@ public class CodewiseS3ClientTest {
 	public void shouldListObjectBatches() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		CodewiseS3Client client = new CodewiseS3Client(amazonS3Client, credentials);
+		CodewiseS3Client client = new CodewiseS3Client(credentials);
 
 		// When & Then
 		ObjectListing listing = client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/05/");
@@ -128,7 +135,7 @@ public class CodewiseS3ClientTest {
 	public void shouldListObjectBatchesWhenStartingWithARequest() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		CodewiseS3Client client = new CodewiseS3Client(amazonS3Client, credentials);
+		CodewiseS3Client client = new CodewiseS3Client(credentials);
 
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
@@ -151,7 +158,7 @@ public class CodewiseS3ClientTest {
 	public void shouldListObjectWithMaxKeysLimit() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		CodewiseS3Client client = new CodewiseS3Client(amazonS3Client, credentials);
+		CodewiseS3Client client = new CodewiseS3Client(credentials);
 
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
@@ -173,7 +180,7 @@ public class CodewiseS3ClientTest {
 	public void shouldListObjectBatchesWhenUsingRequest() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		CodewiseS3Client client = new CodewiseS3Client(amazonS3Client, credentials);
+		CodewiseS3Client client = new CodewiseS3Client(credentials);
 
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
@@ -197,7 +204,7 @@ public class CodewiseS3ClientTest {
 	public void shouldReturnEmptyListingWhenNotTruncated() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		CodewiseS3Client client = new CodewiseS3Client(amazonS3Client, credentials);
+		CodewiseS3Client client = new CodewiseS3Client(credentials);
 
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
@@ -219,7 +226,7 @@ public class CodewiseS3ClientTest {
 	public void shouldListCommonPrefixes() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		CodewiseS3Client client = new CodewiseS3Client(amazonS3Client, credentials);
+		CodewiseS3Client client = new CodewiseS3Client(credentials);
 
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
@@ -232,5 +239,34 @@ public class CodewiseS3ClientTest {
 
 		// Then
 		ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing).isNotTruncated();
+	}
+
+	@Test
+	public void shouldPutObject() throws IOException {
+		// Given
+		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
+		CodewiseS3Client client = new CodewiseS3Client(credentials);
+
+		String objectName = RandomStringUtils.randomAlphanumeric(55);
+		byte[] data = RandomStringUtils.randomAlphanumeric(10 * 1024).getBytes();
+
+		ObjectMetadata metadata = new ObjectMetadata();
+		metadata.setContentLength(data.length);
+		metadata.setContentType("application/octet-stream");
+		metadata.setContentMD5(getBase64EncodedMD5Hash(data));
+
+		// When
+		client.putObject(bucketName, objectName, new ByteArrayInputStream(data), metadata);
+
+		// Then
+		S3Object object = amazonS3Client.getObject(bucketName, objectName);
+		byte[] actual = IOUtils.toByteArray(object.getObjectContent());
+
+		assertThat(actual).isEqualTo(data);
+	}
+
+	private String getBase64EncodedMD5Hash(byte[] packet) {
+		byte[] digest = DigestUtils.md5(packet);
+		return new String(Base64.encodeBase64(digest));
 	}
 }

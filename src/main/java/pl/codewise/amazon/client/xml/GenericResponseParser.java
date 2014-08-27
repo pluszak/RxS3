@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Optional;
 
 public abstract class GenericResponseParser<Context> {
 
@@ -44,7 +45,7 @@ public abstract class GenericResponseParser<Context> {
 		}
 	}
 
-	public abstract Context parse(Response response) throws IOException;
+	public abstract Optional<Context> parse(Response response) throws IOException;
 
 	private void processContents(XmlPullParser parser, Context exceptionBuilder) throws XmlPullParserException, IOException {
 		LinkedList<TagHandler<Context>> handlerStack = Lists.newLinkedList();

@@ -7,6 +7,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 
 public class TestS3Object {
 
@@ -22,7 +23,7 @@ public class TestS3Object {
 		this.metadata = metadata;
 	}
 
-	public void putToS3(AmazonS3Client client, String bucketName) {
+	public void putToS3(AmazonS3Client client, String bucketName) throws IOException {
 		ByteArrayInputStream bais = new ByteArrayInputStream(data);
 		client.putObject(bucketName, objectName, bais, metadata);
 	}

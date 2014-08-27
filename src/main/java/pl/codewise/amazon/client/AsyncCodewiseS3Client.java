@@ -12,25 +12,25 @@ import org.slf4j.LoggerFactory;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 import pl.codewise.amazon.client.auth.AWSSignatureCalculatorFactory;
+import pl.codewise.amazon.client.xml.ConsumeBytesParser;
 import pl.codewise.amazon.client.xml.ErrorResponseParser;
 import pl.codewise.amazon.client.xml.GenericResponseParser;
 import pl.codewise.amazon.client.xml.ListResponseParser;
-import pl.codewise.amazon.client.xml.PassThroughParser;
+import rx.Observer;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
 
 import static pl.codewise.amazon.client.RestUtils.createQueryString;
 import static pl.codewise.amazon.client.RestUtils.escape;
 
-public class CodewiseS3Client implements Closeable {
+public class AsyncCodewiseS3Client implements Closeable {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(CodewiseS3Client.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(AsyncCodewiseS3Client.class);
 
-	private static final String S3_LOCATION = "s3.amazonaws.com";
+	public static final String S3_LOCATION = "s3.amazonaws.com";
 	private static final String S3_URL = "http://" + S3_LOCATION;
 
 	private final AsyncHttpClient httpClient;
@@ -40,22 +40,7 @@ public class CodewiseS3Client implements Closeable {
 
 	private final AWSSignatureCalculatorFactory signatureCalculators;
 
-	public CodewiseS3Client(AWSCredentials credentials) {
-		httpClient = createHttpClient();
-
-		try {
-			XmlPullParserFactory pullParserFactory = XmlPullParserFactory.newInstance();
-
-			listResponseParser = new ListResponseParser(pullParserFactory);
-			errorResponseParser = new ErrorResponseParser(pullParserFactory);
-		} catch (XmlPullParserException e) {
-			throw new RuntimeException("Unable to initialize xml pull parser factory", e);
-		}
-
-		signatureCalculators = new AWSSignatureCalculatorFactory(credentials);
-	}
-
-	private AsyncHttpClient createHttpClient() {
+	public AsyncCodewiseS3Client(AWSCredentials credentials) {
 		NettyAsyncHttpProviderConfig providerConfig = new NettyAsyncHttpProviderConfig();
 		providerConfig.addProperty(NettyAsyncHttpProviderConfig.REUSE_ADDRESS, true);
 
@@ -70,10 +55,22 @@ public class CodewiseS3Client implements Closeable {
 				.setIOThreadMultiplier(1)
 				.build();
 
-		return new AsyncHttpClient(config);
+		httpClient = new AsyncHttpClient(config);
+
+		try {
+			XmlPullParserFactory pullParserFactory = XmlPullParserFactory.newInstance();
+			pullParserFactory.setNamespaceAware(false);
+
+			listResponseParser = new ListResponseParser(pullParserFactory);
+			errorResponseParser = new ErrorResponseParser(pullParserFactory);
+		} catch (XmlPullParserException e) {
+			throw new RuntimeException("Unable to initialize xml pull parser factory", e);
+		}
+
+		signatureCalculators = new AWSSignatureCalculatorFactory(credentials);
 	}
 
-	public void putObject(String bucketName, String key, InputStream inputStream, ObjectMetadata metadata) throws IOException {
+	public void putObject(String bucketName, String key, InputStream inputStream, ObjectMetadata metadata, Observer<byte[]> observer) throws IOException {
 		String virtualHost = getVirtualHost(bucketName);
 
 		Request request = httpClient.preparePut(S3_URL + "/" + key)
@@ -85,47 +82,18 @@ public class CodewiseS3Client implements Closeable {
 				.setHeader("Content-Type", metadata.getContentType())
 				.build();
 
-		retrieveResult(request, new PassThroughParser()).close();
+		retrieveResult(request, observer, ConsumeBytesParser.getInstance());
 	}
 
-	public void putObject(PutObjectRequest request) throws IOException {
-		putObject(request.getBucketName(), request.getKey(), request.getInputStream(), request.getMetadata());
+	public void putObject(PutObjectRequest request, Observer<byte[]> observer) throws IOException {
+		putObject(request.getBucketName(), request.getKey(), request.getInputStream(), request.getMetadata(), observer);
 	}
 
-	public InputStream getObject(String bucketName, String location) throws IOException {
-		String virtualHost = getVirtualHost(bucketName);
-		String url = S3_URL + "/" + escape(location);
-
-		Request request = httpClient.prepareGet(url)
-				.setVirtualHost(virtualHost)
-				.setSignatureCalculator(signatureCalculators.getGetSignatureCalculator(bucketName))
-				.build();
-
-		return retrieveResult(request, new PassThroughParser());
+	public void listObjects(String bucketName, Observer<ObjectListing> observer) {
+		listObjects(bucketName, null, observer);
 	}
 
-	@SuppressWarnings("UnusedDeclaration")
-	public ListenableFuture<Response> deleteObject(String bucketName, String object) throws IOException {
-		String virtualHost = getVirtualHost(bucketName);
-
-		Request request = httpClient.prepareDelete(S3_URL + "/" + escape(object))
-				.setVirtualHost(virtualHost)
-				.setSignatureCalculator(signatureCalculators.getDeleteSignatureCalculator(bucketName))
-				.build();
-
-		return httpClient.executeRequest(request, new AsyncCompletionHandler<Response>() {
-			@Override
-			public Response onCompleted(Response response) throws Exception {
-				return response;
-			}
-		});
-	}
-
-	public ObjectListing listObjects(String bucketName) throws IOException {
-		return listObjects(bucketName, null);
-	}
-
-	public ObjectListing listObjects(String bucketName, String prefix) throws IOException {
+	public void listObjects(String bucketName, String prefix, Observer<ObjectListing> observer) {
 		String virtualHost = getVirtualHost(bucketName);
 		String queryString = createQueryString(prefix, null, null, null);
 
@@ -134,10 +102,10 @@ public class CodewiseS3Client implements Closeable {
 				.setSignatureCalculator(signatureCalculators.getListSignatureCalculator(bucketName))
 				.build();
 
-		return retrieveResult(request, listResponseParser);
+		retrieveResult(request, observer, listResponseParser);
 	}
 
-	public ObjectListing listNextBatchOfObjects(ObjectListing objectListing) throws IOException {
+	public void listNextBatchOfObjects(ObjectListing objectListing, Observer<ObjectListing> observer) {
 		if (!objectListing.isTruncated()) {
 			ObjectListing emptyListing = new ObjectListing();
 			emptyListing.setBucketName(objectListing.getBucketName());
@@ -145,22 +113,21 @@ public class CodewiseS3Client implements Closeable {
 			emptyListing.setMarker(objectListing.getNextMarker());
 			emptyListing.setMaxKeys(objectListing.getMaxKeys());
 			emptyListing.setPrefix(objectListing.getPrefix());
-			emptyListing.setEncodingType(objectListing.getEncodingType());
 			emptyListing.setTruncated(false);
 
-			return emptyListing;
+			observer.onNext(emptyListing);
 		}
 
-		return listObjects(new ListObjectsRequest(
+		listObjects(new ListObjectsRequest(
 				objectListing.getBucketName(),
 				objectListing.getPrefix(),
 				objectListing.getNextMarker(),
 				objectListing.getDelimiter(),
 				objectListing.getMaxKeys()
-		));
+		), observer);
 	}
 
-	public ObjectListing listObjects(ListObjectsRequest listObjectsRequest) throws IOException {
+	public void listObjects(ListObjectsRequest listObjectsRequest, Observer<ObjectListing> observer) {
 		String virtualHost = getVirtualHost(listObjectsRequest.getBucketName());
 		String queryString = createQueryString(listObjectsRequest);
 
@@ -169,11 +136,23 @@ public class CodewiseS3Client implements Closeable {
 				.setSignatureCalculator(signatureCalculators.getListSignatureCalculator(listObjectsRequest.getBucketName()))
 				.build();
 
-		return retrieveResult(request, listResponseParser);
+		retrieveResult(request, observer, listResponseParser);
+	}
+
+	public void getObject(String bucketName, String location, Observer<byte[]> observer) throws IOException {
+		String virtualHost = getVirtualHost(bucketName);
+		String url = S3_URL + "/" + escape(location);
+
+		Request request = httpClient.prepareGet(url)
+				.setVirtualHost(virtualHost)
+				.setSignatureCalculator(signatureCalculators.getGetSignatureCalculator(bucketName))
+				.build();
+
+		retrieveResult(request, observer, ConsumeBytesParser.getInstance());
 	}
 
 	@Override
-	public void close() throws IOException {
+	public void close() {
 		httpClient.close();
 	}
 
@@ -181,30 +160,39 @@ public class CodewiseS3Client implements Closeable {
 		return bucketName + "." + S3_LOCATION;
 	}
 
-	private void throwExceptionIfUnsuccessful(Response response) throws IOException {
+	private boolean emitExceptionIfUnsuccessful(Response response, Observer<?> observer) throws IOException {
 		if (response.getStatusCode() != 200) {
-			throw errorResponseParser.parseResponse(response).build();
+			observer.onError(errorResponseParser.parse(response).get().build());
+			return true;
 		}
+
+		return false;
 	}
 
-	private <T> T retrieveResult(Request request, GenericResponseParser<T> responseParser) throws IOException {
+	private <T> void retrieveResult(final Request request, final Observer<T> observer, final GenericResponseParser<T> responseParser) {
 		try {
-			Response response = httpClient.executeRequest(request, new AsyncCompletionHandler<Response>() {
+			httpClient.executeRequest(request, new AsyncCompletionHandler<T>() {
 				@Override
-				public Response onCompleted(Response response) throws Exception {
-					return response;
+				public T onCompleted(Response response) throws IOException {
+					if (LOGGER.isTraceEnabled()) {
+						LOGGER.trace("Amazon response '{}'", response.getResponseBody());
+					}
+
+					if (!emitExceptionIfUnsuccessful(response, observer)) {
+						try {
+							Optional<T> result = responseParser.parse(response);
+							result.ifPresent(observer::onNext);
+							observer.onCompleted();
+						} catch (Exception e) {
+							observer.onError(e);
+						}
+					}
+
+					return null;
 				}
-			}).get();
-
-			if (LOGGER.isDebugEnabled()) {
-				LOGGER.debug("Amazon response '{}'", response.getResponseBody());
-			}
-			throwExceptionIfUnsuccessful(response);
-
-			Optional<T> maybeResult = responseParser.parse(response);
-			return maybeResult.orElse(null);
-		} catch (InterruptedException | ExecutionException e) {
-			throw new IOException(e);
+			});
+		} catch (IOException e) {
+			observer.onError(e);
 		}
 	}
 }
