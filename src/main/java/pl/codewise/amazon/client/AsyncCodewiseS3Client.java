@@ -5,8 +5,10 @@ import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.ning.http.client.*;
-import com.ning.http.client.providers.netty.NettyAsyncHttpProviderConfig;
+import com.ning.http.client.AsyncCompletionHandler;
+import com.ning.http.client.AsyncHttpClient;
+import com.ning.http.client.Request;
+import com.ning.http.client.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xmlpull.v1.XmlPullParserException;
@@ -40,22 +42,8 @@ public class AsyncCodewiseS3Client implements Closeable {
 
 	private final AWSSignatureCalculatorFactory signatureCalculators;
 
-	public AsyncCodewiseS3Client(AWSCredentials credentials) {
-		NettyAsyncHttpProviderConfig providerConfig = new NettyAsyncHttpProviderConfig();
-		providerConfig.addProperty(NettyAsyncHttpProviderConfig.REUSE_ADDRESS, true);
-
-		AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder()
-				.setAllowPoolingConnection(true)
-				.setAsyncHttpClientProviderConfig(providerConfig)
-				.setConnectionTimeoutInMs(1000)
-				.setRequestTimeoutInMs(10000)
-				.setFollowRedirects(false)
-				.setMaximumConnectionsPerHost(1000)
-				.setMaximumConnectionsTotal(1000)
-				.setIOThreadMultiplier(1)
-				.build();
-
-		httpClient = new AsyncHttpClient(config);
+	public AsyncCodewiseS3Client(AWSCredentials credentials, HttpClientFactory httpClientFactory) {
+		this.httpClient = httpClientFactory.getHttpClient();
 
 		try {
 			XmlPullParserFactory pullParserFactory = XmlPullParserFactory.newInstance();
@@ -181,7 +169,9 @@ public class AsyncCodewiseS3Client implements Closeable {
 					if (!emitExceptionIfUnsuccessful(response, observer)) {
 						try {
 							Optional<T> result = responseParser.parse(response);
-							result.ifPresent(observer::onNext);
+							if (result.isPresent()) {
+								observer.onNext(result.get());
+							}
 							observer.onCompleted();
 						} catch (Exception e) {
 							observer.onError(e);
@@ -189,6 +179,12 @@ public class AsyncCodewiseS3Client implements Closeable {
 					}
 
 					return null;
+				}
+
+				@Override
+				public void onThrowable(Throwable t) {
+					LOGGER.error("Error while processing S3 request", t);
+					observer.onError(t);
 				}
 			});
 		} catch (IOException e) {

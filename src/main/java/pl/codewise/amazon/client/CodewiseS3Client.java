@@ -6,7 +6,6 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.ning.http.client.*;
-import com.ning.http.client.providers.netty.NettyAsyncHttpProviderConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xmlpull.v1.XmlPullParserException;
@@ -40,8 +39,8 @@ public class CodewiseS3Client implements Closeable {
 
 	private final AWSSignatureCalculatorFactory signatureCalculators;
 
-	public CodewiseS3Client(AWSCredentials credentials) {
-		httpClient = createHttpClient();
+	public CodewiseS3Client(AWSCredentials credentials, HttpClientFactory httpClientFactory) {
+		this.httpClient = httpClientFactory.getHttpClient();
 
 		try {
 			XmlPullParserFactory pullParserFactory = XmlPullParserFactory.newInstance();
@@ -53,24 +52,6 @@ public class CodewiseS3Client implements Closeable {
 		}
 
 		signatureCalculators = new AWSSignatureCalculatorFactory(credentials);
-	}
-
-	private AsyncHttpClient createHttpClient() {
-		NettyAsyncHttpProviderConfig providerConfig = new NettyAsyncHttpProviderConfig();
-		providerConfig.addProperty(NettyAsyncHttpProviderConfig.REUSE_ADDRESS, true);
-
-		AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder()
-				.setAllowPoolingConnection(true)
-				.setAsyncHttpClientProviderConfig(providerConfig)
-				.setConnectionTimeoutInMs(1000)
-				.setRequestTimeoutInMs(10000)
-				.setFollowRedirects(false)
-				.setMaximumConnectionsPerHost(1000)
-				.setMaximumConnectionsTotal(1000)
-				.setIOThreadMultiplier(1)
-				.build();
-
-		return new AsyncHttpClient(config);
 	}
 
 	public void putObject(String bucketName, String key, InputStream inputStream, ObjectMetadata metadata) throws IOException {
@@ -173,7 +154,7 @@ public class CodewiseS3Client implements Closeable {
 	}
 
 	@Override
-	public void close() throws IOException {
+	public void close() {
 		httpClient.close();
 	}
 
@@ -196,8 +177,8 @@ public class CodewiseS3Client implements Closeable {
 				}
 			}).get();
 
-			if (LOGGER.isDebugEnabled()) {
-				LOGGER.debug("Amazon response '{}'", response.getResponseBody());
+			if (LOGGER.isTraceEnabled()) {
+				LOGGER.trace("Amazon response '{}'", response.getResponseBody());
 			}
 			throwExceptionIfUnsuccessful(response);
 
