@@ -18,7 +18,9 @@ import pl.codewise.amazon.client.xml.ConsumeBytesParser;
 import pl.codewise.amazon.client.xml.ErrorResponseParser;
 import pl.codewise.amazon.client.xml.GenericResponseParser;
 import pl.codewise.amazon.client.xml.ListResponseParser;
+import rx.Observable;
 import rx.Observer;
+import rx.Subscriber;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -28,6 +30,7 @@ import java.util.Optional;
 import static pl.codewise.amazon.client.RestUtils.createQueryString;
 import static pl.codewise.amazon.client.RestUtils.escape;
 
+@SuppressWarnings("UnusedDeclaration")
 public class AsyncCodewiseS3Client implements Closeable {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(AsyncCodewiseS3Client.class);
@@ -58,7 +61,7 @@ public class AsyncCodewiseS3Client implements Closeable {
 		signatureCalculators = new AWSSignatureCalculatorFactory(credentials);
 	}
 
-	public void putObject(String bucketName, String key, InputStream inputStream, ObjectMetadata metadata, Observer<byte[]> observer) throws IOException {
+	public Observable<byte[]> putObject(String bucketName, String key, InputStream inputStream, ObjectMetadata metadata) throws IOException {
 		String virtualHost = getVirtualHost(bucketName);
 
 		Request request = httpClient.preparePut(S3_URL + "/" + key)
@@ -70,18 +73,18 @@ public class AsyncCodewiseS3Client implements Closeable {
 				.setHeader("Content-Type", metadata.getContentType())
 				.build();
 
-		retrieveResult(request, observer, ConsumeBytesParser.getInstance());
+		return retrieveResult(request, ConsumeBytesParser.getInstance());
 	}
 
-	public void putObject(PutObjectRequest request, Observer<byte[]> observer) throws IOException {
-		putObject(request.getBucketName(), request.getKey(), request.getInputStream(), request.getMetadata(), observer);
+	public Observable<byte[]> putObject(PutObjectRequest request) throws IOException {
+		return putObject(request.getBucketName(), request.getKey(), request.getInputStream(), request.getMetadata());
 	}
 
-	public void listObjects(String bucketName, Observer<ObjectListing> observer) {
-		listObjects(bucketName, null, observer);
+	public Observable<ObjectListing> listObjects(String bucketName) {
+		return listObjects(bucketName, null);
 	}
 
-	public void listObjects(String bucketName, String prefix, Observer<ObjectListing> observer) {
+	public Observable<ObjectListing> listObjects(String bucketName, String prefix) {
 		String virtualHost = getVirtualHost(bucketName);
 		String queryString = createQueryString(prefix, null, null, null);
 
@@ -90,10 +93,10 @@ public class AsyncCodewiseS3Client implements Closeable {
 				.setSignatureCalculator(signatureCalculators.getListSignatureCalculator(bucketName))
 				.build();
 
-		retrieveResult(request, observer, listResponseParser);
+		return retrieveResult(request, listResponseParser);
 	}
 
-	public void listNextBatchOfObjects(ObjectListing objectListing, Observer<ObjectListing> observer) {
+	public Observable<ObjectListing> listNextBatchOfObjects(ObjectListing objectListing) {
 		if (!objectListing.isTruncated()) {
 			ObjectListing emptyListing = new ObjectListing();
 			emptyListing.setBucketName(objectListing.getBucketName());
@@ -103,19 +106,19 @@ public class AsyncCodewiseS3Client implements Closeable {
 			emptyListing.setPrefix(objectListing.getPrefix());
 			emptyListing.setTruncated(false);
 
-			observer.onNext(emptyListing);
+			return Observable.just(emptyListing);
 		}
 
-		listObjects(new ListObjectsRequest(
+		return listObjects(new ListObjectsRequest(
 				objectListing.getBucketName(),
 				objectListing.getPrefix(),
 				objectListing.getNextMarker(),
 				objectListing.getDelimiter(),
 				objectListing.getMaxKeys()
-		), observer);
+		));
 	}
 
-	public void listObjects(ListObjectsRequest listObjectsRequest, Observer<ObjectListing> observer) {
+	public Observable<ObjectListing> listObjects(ListObjectsRequest listObjectsRequest) {
 		String virtualHost = getVirtualHost(listObjectsRequest.getBucketName());
 		String queryString = createQueryString(listObjectsRequest);
 
@@ -124,10 +127,10 @@ public class AsyncCodewiseS3Client implements Closeable {
 				.setSignatureCalculator(signatureCalculators.getListSignatureCalculator(listObjectsRequest.getBucketName()))
 				.build();
 
-		retrieveResult(request, observer, listResponseParser);
+		return retrieveResult(request, listResponseParser);
 	}
 
-	public void getObject(String bucketName, String location, Observer<byte[]> observer) throws IOException {
+	public Observable<byte[]> getObject(String bucketName, String location) throws IOException {
 		String virtualHost = getVirtualHost(bucketName);
 		String url = S3_URL + "/" + escape(location);
 
@@ -136,7 +139,7 @@ public class AsyncCodewiseS3Client implements Closeable {
 				.setSignatureCalculator(signatureCalculators.getGetSignatureCalculator(bucketName))
 				.build();
 
-		retrieveResult(request, observer, ConsumeBytesParser.getInstance());
+		return retrieveResult(request, ConsumeBytesParser.getInstance());
 	}
 
 	@Override
@@ -148,47 +151,69 @@ public class AsyncCodewiseS3Client implements Closeable {
 		return bucketName + "." + S3_LOCATION;
 	}
 
-	private boolean emitExceptionIfUnsuccessful(Response response, Observer<?> observer) throws IOException {
-		if (response.getStatusCode() != 200) {
-			observer.onError(errorResponseParser.parse(response).get().build());
-			return true;
-		}
-
-		return false;
+	private <T> Observable<T> retrieveResult(final Request request, final GenericResponseParser<T> responseParser) {
+		return Observable.create((Subscriber<? super T> subscriber) -> {
+			try {
+				httpClient.executeRequest(request, new SubscriptionCompletionHandler<>(subscriber, responseParser));
+			} catch (IOException e) {
+				subscriber.onError(e);
+			}
+		});
 	}
 
-	private <T> void retrieveResult(final Request request, final Observer<T> observer, final GenericResponseParser<T> responseParser) {
-		try {
-			httpClient.executeRequest(request, new AsyncCompletionHandler<T>() {
-				@Override
-				public T onCompleted(Response response) throws IOException {
-					if (LOGGER.isTraceEnabled()) {
-						LOGGER.trace("Amazon response '{}'", response.getResponseBody());
+	private class SubscriptionCompletionHandler<T> extends AsyncCompletionHandler<T> {
+
+		private final Subscriber<? super T> subscriber;
+		private final GenericResponseParser<T> responseParser;
+
+		public SubscriptionCompletionHandler(Subscriber<? super T> subscriber, GenericResponseParser<T> responseParser) {
+			this.subscriber = subscriber;
+			this.responseParser = responseParser;
+		}
+
+		@Override
+		public T onCompleted(Response response) throws IOException {
+			if (LOGGER.isTraceEnabled()) {
+				LOGGER.trace("Amazon response '{}'", response.getResponseBody());
+			}
+
+			if (subscriber.isUnsubscribed()) {
+				return ignoreReturnValue();
+			}
+
+			if (!emitExceptionIfUnsuccessful(response, subscriber)) {
+				try {
+					Optional<T> result = responseParser.parse(response);
+					if (result.isPresent()) {
+						subscriber.onNext(result.get());
 					}
 
-					if (!emitExceptionIfUnsuccessful(response, observer)) {
-						try {
-							Optional<T> result = responseParser.parse(response);
-							if (result.isPresent()) {
-								observer.onNext(result.get());
-							}
-							observer.onCompleted();
-						} catch (Exception e) {
-							observer.onError(e);
-						}
-					}
-
-					return null;
+					subscriber.onCompleted();
+				} catch (Exception e) {
+					subscriber.onError(e);
 				}
+			}
 
-				@Override
-				public void onThrowable(Throwable t) {
-					LOGGER.error("Error while processing S3 request", t);
-					observer.onError(t);
-				}
-			});
-		} catch (IOException e) {
-			observer.onError(e);
+			return ignoreReturnValue();
+		}
+
+		@Override
+		public void onThrowable(Throwable t) {
+			LOGGER.error("Error while processing S3 request", t);
+			subscriber.onError(t);
+		}
+
+		private boolean emitExceptionIfUnsuccessful(Response response, Observer<?> observer) throws IOException {
+			if (response.getStatusCode() != 200) {
+				observer.onError(errorResponseParser.parse(response).get().build());
+				return true;
+			}
+
+			return false;
+		}
+
+		T ignoreReturnValue() {
+			return null;
 		}
 	}
 }
