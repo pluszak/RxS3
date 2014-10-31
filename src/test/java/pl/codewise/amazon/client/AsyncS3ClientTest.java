@@ -10,16 +10,22 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.junit.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
+import rx.Observable;
+import rx.Subscriber;
+import rx.subjects.PublishSubject;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class CodewiseS3ClientTest {
+public class AsyncS3ClientTest {
 
 	public static final String ACCESS_KEY_PROPERTY_NAME = "s3.accessKey";
 	public static final String SECRET_KEY_PROPERTY_NAME = "s3.secretKey";
@@ -70,10 +76,10 @@ public class CodewiseS3ClientTest {
 	public void shouldListObjectsInBucket() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		CodewiseS3Client client = new CodewiseS3Client(credentials);
+		AsyncS3Client client = new AsyncS3Client(credentials, HttpClientFactory.defaultFactory());
 
 		// When
-		ObjectListing listing = client.listObjects(bucketName);
+		Observable<ObjectListing> listing = client.listObjects(bucketName);
 		ObjectListing amazonListing = amazonS3Client.listObjects(bucketName);
 
 		// Then
@@ -84,10 +90,10 @@ public class CodewiseS3ClientTest {
 	public void shouldListObjects() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		CodewiseS3Client client = new CodewiseS3Client(credentials);
+		AsyncS3Client client = new AsyncS3Client(credentials, HttpClientFactory.defaultFactory());
 
 		// When
-		ObjectListing listing = client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/");
+		Observable<ObjectListing> listing = client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/");
 		ObjectListing amazonListing = amazonS3Client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/");
 
 		// Then
@@ -98,14 +104,14 @@ public class CodewiseS3ClientTest {
 	public void shouldListObjectsWhenUsingRequest() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		CodewiseS3Client client = new CodewiseS3Client(credentials);
+		AsyncS3Client client = new AsyncS3Client(credentials, HttpClientFactory.defaultFactory());
 
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
 		request.setPrefix("COUNTRY_BY_DATE/2014/05/");
 
 		// When
-		ObjectListing listing = client.listObjects(request);
+		Observable<ObjectListing> listing = client.listObjects(request);
 		ObjectListing amazonListing = amazonS3Client.listObjects(request);
 
 		// Then
@@ -116,38 +122,45 @@ public class CodewiseS3ClientTest {
 	public void shouldListObjectBatches() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		CodewiseS3Client client = new CodewiseS3Client(credentials);
+		AsyncS3Client client = new AsyncS3Client(credentials, HttpClientFactory.defaultFactory());
 
 		// When & Then
-		ObjectListing listing = client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/05/");
+		PublishSubject<ObjectListing> inProgressSubject = PublishSubject.create();
+		PublishSubject<ObjectListing> completedSubject = PublishSubject.create();
+
+		Observable<ObjectListing> listing = Observable.create((Subscriber<? super ObjectListing> subscriber) -> client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/05/", subscriber));
 		ObjectListing amazonListing = amazonS3Client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/05/");
 
-		while (amazonListing.isTruncated()) {
-			ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing);
-			listing = client.listNextBatchOfObjects(listing);
-			amazonListing = amazonS3Client.listNextBatchOfObjects(amazonListing);
-		}
+		inProgressSubject.subscribe(objectListing -> {
+			completedSubject.onNext(objectListing);
+			if (!objectListing.isTruncated()) {
+				completedSubject.onCompleted();
+			}
 
-		ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing).isNotTruncated();
+			client.listNextBatchOfObjects(objectListing).subscribe(inProgressSubject::onNext);
+		});
+		listing.subscribe(inProgressSubject::onNext);
+
+		ObjectListingAssert.assertThat(completedSubject).isEqualTo(amazonListing).isNotTruncated();
 	}
 
 	@Test
 	public void shouldListObjectBatchesWhenStartingWithARequest() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		CodewiseS3Client client = new CodewiseS3Client(credentials);
+		AsyncS3Client client = new AsyncS3Client(credentials, HttpClientFactory.defaultFactory());
 
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
 		request.setPrefix("COUNTRY_BY_DATE/2014/06/");
 
 		// When & Then
-		ObjectListing listing = client.listObjects(request);
+		Observable<ObjectListing> listing = client.listObjects(request);
 		ObjectListing amazonListing = amazonS3Client.listObjects(request);
 
 		while (amazonListing.isTruncated()) {
 			ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing);
-			listing = client.listNextBatchOfObjects(listing);
+			listing = client.listNextBatchOfObjects(listing.toBlocking().single());
 			amazonListing = amazonS3Client.listNextBatchOfObjects(amazonListing);
 		}
 
@@ -158,7 +171,7 @@ public class CodewiseS3ClientTest {
 	public void shouldListObjectWithMaxKeysLimit() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		CodewiseS3Client client = new CodewiseS3Client(credentials);
+		AsyncS3Client client = new AsyncS3Client(credentials, HttpClientFactory.defaultFactory());
 
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
@@ -166,7 +179,7 @@ public class CodewiseS3ClientTest {
 		request.setMaxKeys(2);
 
 		// When
-		ObjectListing listing = client.listObjects(request);
+		Observable<ObjectListing> listing = client.listObjects(request);
 		ObjectListing amazonListing = amazonS3Client.listObjects(request);
 
 		// Then
@@ -180,7 +193,7 @@ public class CodewiseS3ClientTest {
 	public void shouldListObjectBatchesWhenUsingRequest() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		CodewiseS3Client client = new CodewiseS3Client(credentials);
+		AsyncS3Client client = new AsyncS3Client(credentials, HttpClientFactory.defaultFactory());
 
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
@@ -188,12 +201,12 @@ public class CodewiseS3ClientTest {
 		request.setPrefix("COUNTRY_BY_DATE/2014/");
 
 		// When & Then
-		ObjectListing listing = client.listObjects(request);
+		Observable<ObjectListing> listing = client.listObjects(request);
 		ObjectListing amazonListing = amazonS3Client.listObjects(request);
 
 		while (amazonListing.isTruncated()) {
 			ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing);
-			listing = client.listNextBatchOfObjects(listing);
+			listing = client.listNextBatchOfObjects(listing.toBlocking().single());
 			amazonListing = amazonS3Client.listNextBatchOfObjects(amazonListing);
 		}
 
@@ -204,18 +217,22 @@ public class CodewiseS3ClientTest {
 	public void shouldReturnEmptyListingWhenNotTruncated() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		CodewiseS3Client client = new CodewiseS3Client(credentials);
+		AsyncS3Client client = new AsyncS3Client(credentials, HttpClientFactory.defaultFactory());
 
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
 		request.setPrefix("COUNTRY_BY_DATE/2014/");
 
-		ObjectListing listing = client.listObjects(request);
+		Observable<ObjectListing> listing = client.listObjects(request);
 		ObjectListing amazonListing = amazonS3Client.listObjects(request);
-		ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing).isNotTruncated();
+
+		ObjectListingAssert
+				.assertThat(listing)
+				.isEqualTo(amazonListing)
+				.isNotTruncated();
 
 		// When
-		listing = client.listNextBatchOfObjects(listing);
+		listing = client.listNextBatchOfObjects(listing.toBlocking().single());
 		amazonListing = amazonS3Client.listNextBatchOfObjects(amazonListing);
 
 		// Then
@@ -226,7 +243,7 @@ public class CodewiseS3ClientTest {
 	public void shouldListCommonPrefixes() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		CodewiseS3Client client = new CodewiseS3Client(credentials);
+		AsyncS3Client client = new AsyncS3Client(credentials, HttpClientFactory.defaultFactory());
 
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
@@ -234,7 +251,7 @@ public class CodewiseS3ClientTest {
 		request.setDelimiter("/");
 
 		// When
-		ObjectListing listing = client.listObjects(request);
+		Observable<ObjectListing> listing = client.listObjects(request);
 		ObjectListing amazonListing = amazonS3Client.listObjects(request);
 
 		// Then
@@ -245,7 +262,7 @@ public class CodewiseS3ClientTest {
 	public void shouldPutObject() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		CodewiseS3Client client = new CodewiseS3Client(credentials);
+		AsyncS3Client client = new AsyncS3Client(credentials, HttpClientFactory.defaultFactory());
 
 		String objectName = RandomStringUtils.randomAlphanumeric(55);
 		byte[] data = RandomStringUtils.randomAlphanumeric(10 * 1024).getBytes();
@@ -256,7 +273,12 @@ public class CodewiseS3ClientTest {
 		metadata.setContentMD5(getBase64EncodedMD5Hash(data));
 
 		// When
-		client.putObject(bucketName, objectName, new ByteArrayInputStream(data), metadata);
+		BasicConfigurator.configure();
+		LogManager.getRootLogger().setLevel(Level.DEBUG);
+
+		client.putObject(bucketName, objectName, new ByteArrayInputStream(data), metadata)
+				.toBlocking()
+				.single();
 
 		// Then
 		S3Object object = amazonS3Client.getObject(bucketName, objectName);
