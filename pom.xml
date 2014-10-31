@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>pl.codewise</groupId>
-	<artifactId>crux</artifactId>
+	<artifactId>rxs3</artifactId>
 	<version>1.1-SNAPSHOT</version>
 
 	<prerequisites>
