@@ -31,9 +31,9 @@ import static pl.codewise.amazon.client.RestUtils.createQueryString;
 import static pl.codewise.amazon.client.RestUtils.escape;
 
 @SuppressWarnings("UnusedDeclaration")
-public class AsyncCodewiseS3Client implements Closeable {
+public class AsyncS3Client implements Closeable {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(AsyncCodewiseS3Client.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(AsyncS3Client.class);
 
 	public static final String S3_LOCATION = "s3.amazonaws.com";
 	private static final String S3_URL = "http://" + S3_LOCATION;
@@ -45,7 +45,7 @@ public class AsyncCodewiseS3Client implements Closeable {
 
 	private final AWSSignatureCalculatorFactory signatureCalculators;
 
-	public AsyncCodewiseS3Client(AWSCredentials credentials, HttpClientFactory httpClientFactory) {
+	public AsyncS3Client(AWSCredentials credentials, HttpClientFactory httpClientFactory) {
 		this.httpClient = httpClientFactory.getHttpClient();
 
 		try {
@@ -80,8 +80,24 @@ public class AsyncCodewiseS3Client implements Closeable {
 		return putObject(request.getBucketName(), request.getKey(), request.getInputStream(), request.getMetadata());
 	}
 
+	public void listObjects(String bucketName, Subscriber<ObjectListing> subscriber) {
+		listObjects(bucketName, null, subscriber);
+	}
+
 	public Observable<ObjectListing> listObjects(String bucketName) {
-		return listObjects(bucketName, null);
+		return listObjects(bucketName, (String) null);
+	}
+
+	public void listObjects(String bucketName, String prefix, Subscriber<? super ObjectListing> subscriber) {
+		String virtualHost = getVirtualHost(bucketName);
+		String queryString = createQueryString(prefix, null, null, null);
+
+		Request request = httpClient.prepareGet(S3_URL + "/?" + queryString)
+				.setVirtualHost(virtualHost)
+				.setSignatureCalculator(signatureCalculators.getListSignatureCalculator(bucketName))
+				.build();
+
+		retrieveResult(request, listResponseParser, subscriber);
 	}
 
 	public Observable<ObjectListing> listObjects(String bucketName, String prefix) {
@@ -94,6 +110,28 @@ public class AsyncCodewiseS3Client implements Closeable {
 				.build();
 
 		return retrieveResult(request, listResponseParser);
+	}
+
+	public void listNextBatchOfObjects(ObjectListing objectListing, Subscriber<ObjectListing> observable) {
+		if (!objectListing.isTruncated()) {
+			ObjectListing emptyListing = new ObjectListing();
+			emptyListing.setBucketName(objectListing.getBucketName());
+			emptyListing.setDelimiter(objectListing.getDelimiter());
+			emptyListing.setMarker(objectListing.getNextMarker());
+			emptyListing.setMaxKeys(objectListing.getMaxKeys());
+			emptyListing.setPrefix(objectListing.getPrefix());
+			emptyListing.setTruncated(false);
+
+			observable.onNext(objectListing);
+			observable.onCompleted();
+		}
+
+		listObjects(new ListObjectsRequest(
+				objectListing.getBucketName(),
+				objectListing.getPrefix(),
+				objectListing.getNextMarker(),
+				objectListing.getDelimiter(),
+				objectListing.getMaxKeys()), observable);
 	}
 
 	public Observable<ObjectListing> listNextBatchOfObjects(ObjectListing objectListing) {
@@ -114,8 +152,19 @@ public class AsyncCodewiseS3Client implements Closeable {
 				objectListing.getPrefix(),
 				objectListing.getNextMarker(),
 				objectListing.getDelimiter(),
-				objectListing.getMaxKeys()
-		));
+				objectListing.getMaxKeys()));
+	}
+
+	public void listObjects(ListObjectsRequest listObjectsRequest, Subscriber<ObjectListing> observer) {
+		String virtualHost = getVirtualHost(listObjectsRequest.getBucketName());
+		String queryString = createQueryString(listObjectsRequest);
+
+		Request request = httpClient.prepareGet(S3_URL + "/?" + queryString)
+				.setVirtualHost(virtualHost)
+				.setSignatureCalculator(signatureCalculators.getListSignatureCalculator(listObjectsRequest.getBucketName()))
+				.build();
+
+		retrieveResult(request, listResponseParser, observer);
 	}
 
 	public Observable<ObjectListing> listObjects(ListObjectsRequest listObjectsRequest) {
@@ -149,6 +198,14 @@ public class AsyncCodewiseS3Client implements Closeable {
 
 	private String getVirtualHost(String bucketName) {
 		return bucketName + "." + S3_LOCATION;
+	}
+
+	private <T> void retrieveResult(final Request request, final GenericResponseParser<T> responseParser, Subscriber<? super T> observer) {
+		try {
+			httpClient.executeRequest(request, new SubscriptionCompletionHandler<>(observer, responseParser));
+		} catch (IOException e) {
+			observer.onError(e);
+		}
 	}
 
 	private <T> Observable<T> retrieveResult(final Request request, final GenericResponseParser<T> responseParser) {
