@@ -4,6 +4,7 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.assertj.core.api.AbstractAssert;
 import org.assertj.core.api.Assertions;
+import rx.Observable;
 
 import java.util.Iterator;
 
@@ -15,6 +16,10 @@ public class ObjectListingAssert extends AbstractAssert<ObjectListingAssert, Obj
 
 	public static ObjectListingAssert assertThat(ObjectListing objectListing) {
 		return new ObjectListingAssert(objectListing);
+	}
+
+	public static ObjectListingAssert assertThat(Observable<ObjectListing> objectListing) {
+		return new ObjectListingAssert(objectListing.toBlocking().single());
 	}
 
 	public void isNotTruncated() {
