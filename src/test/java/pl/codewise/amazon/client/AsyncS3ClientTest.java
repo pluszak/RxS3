@@ -13,7 +13,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
-import org.junit.AfterClass;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import rx.Observable;
@@ -72,7 +72,7 @@ public class AsyncS3ClientTest {
 		UK.deleteFromS3(amazonS3Client, bucketName);
 	}
 
-	@Test
+	@Test(enabled = false)
 	public void shouldListObjectsInBucket() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
@@ -86,7 +86,7 @@ public class AsyncS3ClientTest {
 		ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing);
 	}
 
-	@Test
+	@Test(enabled = false)
 	public void shouldListObjects() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
@@ -100,7 +100,7 @@ public class AsyncS3ClientTest {
 		ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing);
 	}
 
-	@Test
+	@Test(enabled = false)
 	public void shouldListObjectsWhenUsingRequest() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
@@ -118,7 +118,7 @@ public class AsyncS3ClientTest {
 		ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing);
 	}
 
-	@Test
+	@Test(enabled = false)
 	public void shouldListObjectBatches() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
@@ -144,7 +144,7 @@ public class AsyncS3ClientTest {
 		ObjectListingAssert.assertThat(completedSubject).isEqualTo(amazonListing).isNotTruncated();
 	}
 
-	@Test
+	@Test(enabled = false)
 	public void shouldListObjectBatchesWhenStartingWithARequest() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
@@ -167,7 +167,7 @@ public class AsyncS3ClientTest {
 		ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing).isNotTruncated();
 	}
 
-	@Test
+	@Test(enabled = false)
 	public void shouldListObjectWithMaxKeysLimit() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
@@ -189,7 +189,7 @@ public class AsyncS3ClientTest {
 				.hasSize(2);
 	}
 
-	@Test
+	@Test(enabled = false)
 	public void shouldListObjectBatchesWhenUsingRequest() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
@@ -213,7 +213,7 @@ public class AsyncS3ClientTest {
 		ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing).isNotTruncated();
 	}
 
-	@Test
+	@Test(enabled = false)
 	public void shouldReturnEmptyListingWhenNotTruncated() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
@@ -239,7 +239,7 @@ public class AsyncS3ClientTest {
 		ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing).isNotNull();
 	}
 
-	@Test
+	@Test(enabled = false)
 	public void shouldListCommonPrefixes() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
@@ -258,7 +258,7 @@ public class AsyncS3ClientTest {
 		ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing).isNotTruncated();
 	}
 
-	@Test
+	@Test(enabled = false)
 	public void shouldPutObject() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
