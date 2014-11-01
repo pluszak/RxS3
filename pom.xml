@@ -18,8 +18,8 @@
 	</properties>
 
 	<scm>
-		<connection>scm:git:https://github.com/tkowalcz/RxS3.git</connection>
-		<developerConnection>scm:git:ssh://git@github.com/tkowalcz/RxS3.git</developerConnection>
+		<connection>scm:git:git://github.com/tkowalcz/RxS3.git</connection>
+		<developerConnection>scm:git:git@github.com/tkowalcz/RxS3.git</developerConnection>
 	</scm>
 
 	<distributionManagement>
