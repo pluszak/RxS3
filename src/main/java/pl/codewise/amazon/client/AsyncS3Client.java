@@ -4,7 +4,6 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.ning.http.client.AsyncCompletionHandler;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.Request;
@@ -24,7 +23,6 @@ import rx.Subscriber;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Optional;
 
 import static pl.codewise.amazon.client.RestUtils.createQueryString;
@@ -61,23 +59,19 @@ public class AsyncS3Client implements Closeable {
 		signatureCalculators = new AWSSignatureCalculatorFactory(credentials);
 	}
 
-	public Observable<byte[]> putObject(String bucketName, String key, InputStream inputStream, ObjectMetadata metadata) throws IOException {
+	public Observable<byte[]> putObject(String bucketName, String key, byte[] data, ObjectMetadata metadata) throws IOException {
 		String virtualHost = getVirtualHost(bucketName);
 
 		Request request = httpClient.preparePut(S3_URL + "/" + key)
 				.setVirtualHost(virtualHost)
 				.setSignatureCalculator(signatureCalculators.getPutSignatureCalculator(bucketName))
-				.setBody(inputStream)
+				.setBody(data)
 				.setContentLength((int) metadata.getContentLength())
 				.setHeader("Content-MD5", metadata.getContentMD5())
 				.setHeader("Content-Type", metadata.getContentType())
 				.build();
 
 		return retrieveResult(request, ConsumeBytesParser.getInstance());
-	}
-
-	public Observable<byte[]> putObject(PutObjectRequest request) throws IOException {
-		return putObject(request.getBucketName(), request.getKey(), request.getInputStream(), request.getMetadata());
 	}
 
 	public void listObjects(String bucketName, Subscriber<ObjectListing> subscriber) {
