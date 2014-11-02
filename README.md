@@ -1,7 +1,6 @@
 RxS3
 ========
-[ ![Codeship Status for tkowalcz/RxS3](https://codeship.io/projects/cfedebd0-4387-0132-ca1d-760ee71fb47f/status)](https://codeship.io/projects/44716)
-[![Build Status](https://drone.io/github.com/codewisecom/RxS3/status.png)](https://drone.io/github.com/codewisecom/RxS3/latest)
+[![Build Status](https://travis-ci.org/tkowalcz/RxS3.svg?branch=master)](https://travis-ci.org/tkowalcz/RxS3.svg?branch=master)
 
 RxS3 is a lightweight, asynchronous AmazonS3 client.
 
