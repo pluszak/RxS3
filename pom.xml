@@ -20,7 +20,7 @@
 
 	<scm>
 		<connection>scm:git:https://github.com/tkowalcz/RxS3.git</connection>
-		<developerConnection>scm:git:git@github.com:tkowalcz/RxS3.git</developerConnection>
+		<developerConnection>scm:git:https://github.com/tkowalcz/RxS3.git</developerConnection>
 		<url>https://github.com/tkowalcz/RxS3</url>
 		<tag>HEAD</tag>
 	</scm>
