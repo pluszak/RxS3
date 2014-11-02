@@ -4,12 +4,12 @@
 		<server>
 			<id>github.com</id>
 			<username>tkowalcz</username>
-			<password>${github.password}</password>
+			<password>${env.github.password}</password>
 		</server>
 		<server>
 			<id>bintray</id>
 			<username>kowalczewski</username>
-			<password>${bintray.password}</password>
+			<password>${env.bintray.password}</password>
 		</server>
 	</servers>
 </settings>
