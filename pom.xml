@@ -5,7 +5,7 @@
 
 	<groupId>pl.codewise</groupId>
 	<artifactId>rxs3</artifactId>
-	<version>0.3-SNAPSHOT</version>
+	<version>0.1.0-SNAPSHOT</version>
 
 	<prerequisites>
 		<maven>3.0.4</maven>
