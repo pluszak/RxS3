@@ -24,15 +24,10 @@
 		<tag>HEAD</tag>
 	</scm>
 
-	<!--<scm>-->
-	<!--<connection>scm:git:git@github.com:tkowalcz/RxS3.git</connection>-->
-	<!--<developerConnection>scm:git:git@github.com:tkowalcz/RxS3.git</developerConnection>-->
-	<!--</scm>-->
-
 	<distributionManagement>
 		<repository>
 			<id>bintray</id>
-			<url>https://api.bintray.com/maven/kowalczewski/RxS3/package</url>
+			<url>https://api.bintray.com/maven/kowalczewski/RxS3/RxS3</url>
 		</repository>
 	</distributionManagement>
 
