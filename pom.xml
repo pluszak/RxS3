@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>pl.codewise</groupId>
@@ -46,38 +47,11 @@
 					<groupId>javax.mail</groupId>
 					<artifactId>mail</artifactId>
 				</exclusion>
-			</exclusions>
-		</dependency>
-		<dependency>
-			<groupId>pl.codewise</groupId>
-			<artifactId>common</artifactId>
-			<exclusions>
-				<exclusion>
-					<groupId>com.google.guava</groupId>
-					<artifactId>guava</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>javax.servlet</groupId>
-					<artifactId>servlet-api</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>net.sourceforge.wurfl</groupId>
-					<artifactId>wurfl</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>com.amazonaws</groupId>
-					<artifactId>aws-java-sdk</artifactId>
-				</exclusion>
-				<exclusion>
-					<artifactId>javax.servlet</artifactId>
-					<groupId>org.glassfish</groupId>
-				</exclusion>
 				<exclusion>
 					<groupId>log4j</groupId>
 					<artifactId>log4j</artifactId>
 				</exclusion>
 			</exclusions>
-			<version>1.151</version>
 		</dependency>
 
 		<dependency>
