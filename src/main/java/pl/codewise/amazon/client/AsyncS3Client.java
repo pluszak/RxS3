@@ -43,8 +43,8 @@ public class AsyncS3Client implements Closeable {
 
 	private final AWSSignatureCalculatorFactory signatureCalculators;
 
-	public AsyncS3Client(AWSCredentials credentials, HttpClientFactory httpClientFactory) {
-		this.httpClient = httpClientFactory.getHttpClient();
+	public AsyncS3Client(AWSCredentials credentials, AsyncHttpClient httpClient) {
+		this.httpClient = httpClient;
 
 		try {
 			XmlPullParserFactory pullParserFactory = XmlPullParserFactory.newInstance();
@@ -57,6 +57,10 @@ public class AsyncS3Client implements Closeable {
 		}
 
 		signatureCalculators = new AWSSignatureCalculatorFactory(credentials);
+	}
+
+	public AsyncS3Client(AWSCredentials credentials, HttpClientFactory httpClientFactory) {
+		this(credentials, httpClientFactory.getHttpClient());
 	}
 
 	public Observable<byte[]> putObject(String bucketName, String key, byte[] data, ObjectMetadata metadata) throws IOException {
