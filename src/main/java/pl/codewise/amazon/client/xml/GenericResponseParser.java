@@ -23,8 +23,6 @@ public abstract class GenericResponseParser<Context> {
 	private final TagHandler<Context> unknownTagHandler;
 	private final Map<String, TagHandler<Context>> tagHandlerMap;
 
-	private final List<TagHandler<Context>> handlerStack = Lists.newArrayList();
-
 	@SafeVarargs
 	public GenericResponseParser(XmlPullParserFactory pullParserFactory, TagHandler<Context> unknownTagHandler, TagHandler<Context>... tagHandlers) {
 		this.pullParserFactory = pullParserFactory;
@@ -44,14 +42,14 @@ public abstract class GenericResponseParser<Context> {
 			processContents(parser, context);
 		} catch (XmlPullParserException e) {
 			throw new IOException(e);
-		} finally {
-			handlerStack.clear();
 		}
 	}
 
 	public abstract Optional<Context> parse(Response response) throws IOException;
 
 	private void processContents(XmlPullParser parser, Context exceptionBuilder) throws XmlPullParserException, IOException {
+		List<TagHandler<Context>> handlerStack = Lists.newArrayList();
+
 		int eventType = parser.getEventType();
 		do {
 			if (eventType == XmlPullParser.START_TAG) {
