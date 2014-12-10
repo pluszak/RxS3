@@ -10,7 +10,7 @@ import pl.codewise.amazon.client.xml.handlers.TagHandler;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -21,7 +21,9 @@ public abstract class GenericResponseParser<Context> {
 	private XmlPullParserFactory pullParserFactory;
 
 	private final TagHandler<Context> unknownTagHandler;
-	private Map<String, TagHandler<Context>> tagHandlerMap;
+	private final Map<String, TagHandler<Context>> tagHandlerMap;
+
+	private final List<TagHandler<Context>> handlerStack = Lists.newArrayList();
 
 	@SafeVarargs
 	public GenericResponseParser(XmlPullParserFactory pullParserFactory, TagHandler<Context> unknownTagHandler, TagHandler<Context>... tagHandlers) {
@@ -42,14 +44,14 @@ public abstract class GenericResponseParser<Context> {
 			processContents(parser, context);
 		} catch (XmlPullParserException e) {
 			throw new IOException(e);
+		} finally {
+			handlerStack.clear();
 		}
 	}
 
 	public abstract Optional<Context> parse(Response response) throws IOException;
 
 	private void processContents(XmlPullParser parser, Context exceptionBuilder) throws XmlPullParserException, IOException {
-		LinkedList<TagHandler<Context>> handlerStack = Lists.newLinkedList();
-
 		int eventType = parser.getEventType();
 		do {
 			if (eventType == XmlPullParser.START_TAG) {
