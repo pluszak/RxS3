@@ -5,6 +5,7 @@ import com.amazonaws.services.s3.model.Owner;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.joda.time.LocalDateTime;
 import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 import org.xmlpull.v1.XmlPullParser;
 
 import java.util.LinkedList;
@@ -51,12 +52,15 @@ public enum ListObjectsTagHandler implements TagHandler<ObjectListing> {
 			summary.setSize(Long.parseLong(parser.getText()));
 		}
 	}, LAST_MODIFIED("LastModified") {
+
+		private final DateTimeFormatter DATE_FORMATTER = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+
 		@Override
 		public void handleText(ObjectListing objectListing, XmlPullParser parser, LinkedList<? extends TagHandler<ObjectListing>> handlerStack) {
 			List<S3ObjectSummary> objectSummaries = objectListing.getObjectSummaries();
 			S3ObjectSummary summary = objectSummaries.get(objectSummaries.size() - 1);
 
-			LocalDateTime dateTime = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").parseLocalDateTime(parser.getText());
+			LocalDateTime dateTime = DATE_FORMATTER.parseLocalDateTime(parser.getText());
 			summary.setLastModified(dateTime.toDate());
 		}
 	}, STORAGE_CLASS("StorageClass") {
