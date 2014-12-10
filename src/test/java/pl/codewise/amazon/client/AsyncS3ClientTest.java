@@ -10,9 +10,6 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -272,9 +269,6 @@ public class AsyncS3ClientTest {
 		metadata.setContentMD5(getBase64EncodedMD5Hash(data));
 
 		// When
-		BasicConfigurator.configure();
-		LogManager.getRootLogger().setLevel(Level.DEBUG);
-
 		client.putObject(bucketName, objectName, data, metadata)
 				.toBlocking()
 				.single();
