@@ -89,6 +89,11 @@
 			<artifactId>rxjava-core</artifactId>
 			<version>0.20.5</version>
 		</dependency>
+		<dependency>
+			<groupId>org.javolution</groupId>
+			<artifactId>javolution-core-java</artifactId>
+			<version>6.0.0</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.testng</groupId>

@@ -1,6 +1,8 @@
 package pl.codewise.amazon.client.xml;
 
 import com.google.common.collect.Lists;
+import javolution.text.CharArray;
+import org.xmlpull.v1.XmlPullParser;
 import pl.codewise.amazon.client.xml.handlers.TagHandler;
 
 import java.util.List;
@@ -15,6 +17,9 @@ public class ContextStack<Context> {
 	};
 
 	private final List<TagHandler<Context>> handlerStack = Lists.newArrayListWithCapacity(3);
+
+	private final int[] parseResultStartAndLength = new int[2];
+	private final CharArray parseResultHolder = new CharArray();
 
 	public TagHandler<Context> push(TagHandler<Context> handler) {
 		handlerStack.add(handler);
@@ -36,6 +41,11 @@ public class ContextStack<Context> {
 	private ContextStack<Context> cleared() {
 		handlerStack.clear();
 		return this;
+	}
+
+	public CharArray getTextCharacters(XmlPullParser parser) {
+		char[] characters = parser.getTextCharacters(parseResultStartAndLength);
+		return parseResultHolder.setArray(characters, parseResultStartAndLength[0], parseResultStartAndLength[1]);
 	}
 
 	@SuppressWarnings("unchecked")
