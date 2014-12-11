@@ -7,6 +7,7 @@ import org.joda.time.LocalDateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.xmlpull.v1.XmlPullParser;
+import pl.codewise.amazon.client.xml.ContextStack;
 
 import java.util.List;
 
@@ -23,12 +24,12 @@ public enum ListObjectsTagHandler implements TagHandler<ObjectListing> {
 		}
 	}, IS_TRUNCATED("IsTruncated") {
 		@Override
-		public void handleText(ObjectListing objectListing, XmlPullParser parser, List<? extends TagHandler<ObjectListing>> handlerStack) {
+		public void handleText(ObjectListing objectListing, XmlPullParser parser, ContextStack handlerStack) {
 			objectListing.setTruncated(Boolean.parseBoolean(parser.getText()));
 		}
 	}, KEY("Key") {
 		@Override
-		public void handleText(ObjectListing objectListing, XmlPullParser parser, List<? extends TagHandler<ObjectListing>> handlerStack) {
+		public void handleText(ObjectListing objectListing, XmlPullParser parser, ContextStack handlerStack) {
 			List<S3ObjectSummary> objectSummaries = objectListing.getObjectSummaries();
 			S3ObjectSummary summary = objectSummaries.get(objectSummaries.size() - 1);
 
@@ -36,7 +37,7 @@ public enum ListObjectsTagHandler implements TagHandler<ObjectListing> {
 		}
 	}, ETAG("ETag") {
 		@Override
-		public void handleText(ObjectListing objectListing, XmlPullParser parser, List<? extends TagHandler<ObjectListing>> handlerStack) {
+		public void handleText(ObjectListing objectListing, XmlPullParser parser, ContextStack handlerStack) {
 			List<S3ObjectSummary> objectSummaries = objectListing.getObjectSummaries();
 			S3ObjectSummary summary = objectSummaries.get(objectSummaries.size() - 1);
 
@@ -44,7 +45,7 @@ public enum ListObjectsTagHandler implements TagHandler<ObjectListing> {
 		}
 	}, SIZE("Size") {
 		@Override
-		public void handleText(ObjectListing objectListing, XmlPullParser parser, List<? extends TagHandler<ObjectListing>> handlerStack) {
+		public void handleText(ObjectListing objectListing, XmlPullParser parser, ContextStack handlerStack) {
 			List<S3ObjectSummary> objectSummaries = objectListing.getObjectSummaries();
 			S3ObjectSummary summary = objectSummaries.get(objectSummaries.size() - 1);
 
@@ -55,7 +56,7 @@ public enum ListObjectsTagHandler implements TagHandler<ObjectListing> {
 		private final DateTimeFormatter DATE_FORMATTER = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
 
 		@Override
-		public void handleText(ObjectListing objectListing, XmlPullParser parser, List<? extends TagHandler<ObjectListing>> handlerStack) {
+		public void handleText(ObjectListing objectListing, XmlPullParser parser, ContextStack handlerStack) {
 			List<S3ObjectSummary> objectSummaries = objectListing.getObjectSummaries();
 			S3ObjectSummary summary = objectSummaries.get(objectSummaries.size() - 1);
 
@@ -64,7 +65,7 @@ public enum ListObjectsTagHandler implements TagHandler<ObjectListing> {
 		}
 	}, STORAGE_CLASS("StorageClass") {
 		@Override
-		public void handleText(ObjectListing objectListing, XmlPullParser parser, List<? extends TagHandler<ObjectListing>> handlerStack) {
+		public void handleText(ObjectListing objectListing, XmlPullParser parser, ContextStack handlerStack) {
 			List<S3ObjectSummary> objectSummaries = objectListing.getObjectSummaries();
 			S3ObjectSummary summary = objectSummaries.get(objectSummaries.size() - 1);
 
@@ -80,7 +81,7 @@ public enum ListObjectsTagHandler implements TagHandler<ObjectListing> {
 		}
 	}, ID("ID") {
 		@Override
-		public void handleText(ObjectListing objectListing, XmlPullParser parser, List<? extends TagHandler<ObjectListing>> handlerStack) {
+		public void handleText(ObjectListing objectListing, XmlPullParser parser, ContextStack handlerStack) {
 			List<S3ObjectSummary> objectSummaries = objectListing.getObjectSummaries();
 			S3ObjectSummary summary = objectSummaries.get(objectSummaries.size() - 1);
 
@@ -89,7 +90,7 @@ public enum ListObjectsTagHandler implements TagHandler<ObjectListing> {
 		}
 	}, DISPLAY_NAME("DisplayName") {
 		@Override
-		public void handleText(ObjectListing objectListing, XmlPullParser parser, List<? extends TagHandler<ObjectListing>> handlerStack) {
+		public void handleText(ObjectListing objectListing, XmlPullParser parser, ContextStack handlerStack) {
 			List<S3ObjectSummary> objectSummaries = objectListing.getObjectSummaries();
 			S3ObjectSummary summary = objectSummaries.get(objectSummaries.size() - 1);
 
@@ -106,13 +107,13 @@ public enum ListObjectsTagHandler implements TagHandler<ObjectListing> {
 		}
 	}, NAME("Name") {
 		@Override
-		public void handleText(ObjectListing objectListing, XmlPullParser parser, List<? extends TagHandler<ObjectListing>> handlerStack) {
+		public void handleText(ObjectListing objectListing, XmlPullParser parser, ContextStack handlerStack) {
 			objectListing.setBucketName(parser.getText());
 		}
 	}, PREFIX("Prefix") {
 		@Override
-		public void handleText(ObjectListing objectListing, XmlPullParser parser, List<? extends TagHandler<ObjectListing>> handlerStack) {
-			if (handlerStack.get(handlerStack.size() - 2) == COMMON_PREFIXES) {
+		public void handleText(ObjectListing objectListing, XmlPullParser parser, ContextStack handlerStack) {
+			if (handlerStack.topMinusOne() == COMMON_PREFIXES) {
 				objectListing.getCommonPrefixes().add(parser.getText());
 			} else {
 				objectListing.setPrefix(parser.getText());
@@ -120,17 +121,17 @@ public enum ListObjectsTagHandler implements TagHandler<ObjectListing> {
 		}
 	}, MAX_KEYS("MaxKeys") {
 		@Override
-		public void handleText(ObjectListing objectListing, XmlPullParser parser, List<? extends TagHandler<ObjectListing>> handlerStack) {
+		public void handleText(ObjectListing objectListing, XmlPullParser parser, ContextStack handlerStack) {
 			objectListing.setMaxKeys(Integer.parseInt(parser.getText()));
 		}
 	}, DELIMITER("Delimiter") {
 		@Override
-		public void handleText(ObjectListing objectListing, XmlPullParser parser, List<? extends TagHandler<ObjectListing>> handlerStack) {
+		public void handleText(ObjectListing objectListing, XmlPullParser parser, ContextStack handlerStack) {
 			objectListing.setDelimiter(parser.getText());
 		}
 	}, MARKER("Marker") {
 		@Override
-		public void handleText(ObjectListing objectListing, XmlPullParser parser, List<? extends TagHandler<ObjectListing>> handlerStack) {
+		public void handleText(ObjectListing objectListing, XmlPullParser parser, ContextStack handlerStack) {
 			objectListing.setMarker(parser.getText());
 		}
 	}, COMMON_PREFIXES("CommonPrefixes") {
@@ -148,7 +149,7 @@ public enum ListObjectsTagHandler implements TagHandler<ObjectListing> {
 		return tagName;
 	}
 
-	public void handleText(ObjectListing objectListing, XmlPullParser parser, List<? extends TagHandler<ObjectListing>> handlerStack) {
+	public void handleText(ObjectListing objectListing, XmlPullParser parser, ContextStack handlerStack) {
 	}
 
 	public void handleStart(ObjectListing objectListing, XmlPullParser parser) {

@@ -1,6 +1,5 @@
 package pl.codewise.amazon.client.xml;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.ning.http.client.Response;
 import org.xmlpull.v1.XmlPullParser;
@@ -10,7 +9,6 @@ import pl.codewise.amazon.client.xml.handlers.TagHandler;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -47,26 +45,19 @@ public abstract class GenericResponseParser<Context> {
 
 	public abstract Optional<Context> parse(Response response) throws IOException;
 
-	private void processContents(XmlPullParser parser, Context exceptionBuilder) throws XmlPullParserException, IOException {
-		List<TagHandler<Context>> handlerStack = Lists.newArrayList();
+	private void processContents(XmlPullParser parser, Context context) throws XmlPullParserException, IOException {
+		ContextStack<Context> handlerStack = ContextStack.<Context>getInstance();
 
 		int eventType = parser.getEventType();
 		do {
 			if (eventType == XmlPullParser.START_TAG) {
 				String tagName = parser.getName();
-				TagHandler<Context> tagHandler = tagHandlerMap.get(tagName);
-				if (tagHandler == null) {
-					tagHandler = unknownTagHandler;
-				}
-				handlerStack.add(tagHandler);
-
-				tagHandler.handleStart(exceptionBuilder, parser);
+				TagHandler<Context> tagHandler = tagHandlerMap.getOrDefault(tagName, unknownTagHandler);
+				handlerStack.push(tagHandler).handleStart(context, parser);
 			} else if (eventType == XmlPullParser.END_TAG) {
-				TagHandler<Context> tagHandler = handlerStack.remove(handlerStack.size() - 1);
-				tagHandler.handleEnd(exceptionBuilder, parser);
+				handlerStack.pop().handleEnd(context, parser);
 			} else if (eventType == XmlPullParser.TEXT) {
-				TagHandler<Context> tagHandler = handlerStack.get(handlerStack.size() - 1);
-				tagHandler.handleText(exceptionBuilder, parser, handlerStack);
+				handlerStack.top().handleText(context, parser, handlerStack);
 			}
 			eventType = parser.next();
 		} while (eventType != XmlPullParser.END_DOCUMENT);
