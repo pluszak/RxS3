@@ -4,22 +4,16 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.assertj.core.api.AbstractAssert;
 import org.assertj.core.api.Assertions;
-import rx.Observable;
 
 import java.util.Iterator;
+import java.util.List;
 
 public class ObjectListingAssert extends AbstractAssert<ObjectListingAssert, ObjectListing> {
 
-	private ObjectListingAssert(ObjectListing actual) {
+	private String[] fieldsToIgnore = new String[0];
+
+	ObjectListingAssert(ObjectListing actual) {
 		super(actual, ObjectListingAssert.class);
-	}
-
-	public static ObjectListingAssert assertThat(ObjectListing objectListing) {
-		return new ObjectListingAssert(objectListing);
-	}
-
-	public static ObjectListingAssert assertThat(Observable<ObjectListing> objectListing) {
-		return new ObjectListingAssert(objectListing.toBlocking().single());
 	}
 
 	public void isNotTruncated() {
@@ -69,9 +63,14 @@ public class ObjectListingAssert extends AbstractAssert<ObjectListingAssert, Obj
 
 		while (iterator.hasNext()) {
 			Assertions.assertThat(iterator.next())
-					.isEqualToComparingFieldByField(amazonIterator.next());
+					.isEqualToIgnoringGivenFields(amazonIterator.next(), fieldsToIgnore);
 		}
 
+		return this;
+	}
+
+	public ObjectListingAssert ignoreFields(List<String> fieldsToIgnore) {
+		this.fieldsToIgnore = fieldsToIgnore.toArray(this.fieldsToIgnore);
 		return this;
 	}
 

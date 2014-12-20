@@ -6,6 +6,7 @@ import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
+import com.google.common.collect.Lists;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
@@ -18,8 +19,9 @@ import rx.Subscriber;
 import rx.subjects.PublishSubject;
 
 import java.io.IOException;
+import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static pl.codewise.amazon.client.AsyncS3ClientAssertions.assertThat;
 
 public class AsyncS3ClientTest {
 
@@ -29,12 +31,16 @@ public class AsyncS3ClientTest {
 	public static final String BUCKET_NAME_PROPERTY_NAME = "s3.bucketName";
 
 	private String bucketName;
-	private BasicAWSCredentials credentials;
+	protected BasicAWSCredentials credentials;
 
 	private TestS3Object PL = TestS3Object.withNameAndRandomMetadata("COUNTRY_BY_DATE/2014/05/PL", 2);
 	private TestS3Object US = TestS3Object.withNameAndRandomMetadata("COUNTRY_BY_DATE/2014/05/US", 3);
 	private TestS3Object CZ = TestS3Object.withNameAndRandomMetadata("COUNTRY_BY_DATE/2014/06/CZ", 0);
 	private TestS3Object UK = TestS3Object.withNameAndRandomMetadata("COUNTRY_BY_DATE/2014/07/UK", 1);
+
+	protected ClientConfiguration configuration;
+
+	protected List<String> fieldsToIgnore = Lists.newArrayList();
 
 	@BeforeClass
 	public void setUpCredentialsAndBucketName() {
@@ -49,7 +55,7 @@ public class AsyncS3ClientTest {
 		credentials = new BasicAWSCredentials(accessKey, secretKey);
 	}
 
-	@BeforeClass
+	@BeforeClass(dependsOnMethods = "setUpCredentialsAndBucketName")
 	public void setUpS3Contents() throws IOException {
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
 
@@ -59,48 +65,61 @@ public class AsyncS3ClientTest {
 		UK.putToS3(amazonS3Client, bucketName);
 	}
 
+	@BeforeClass(dependsOnMethods = "setUpS3Contents")
+	public void setUpConfigurationThatDoesNotSkipTags() throws IOException {
+		configuration = ClientConfiguration
+				.builder()
+				.useCredentials(credentials)
+				.build();
+	}
+
 	@AfterClass
 	public void tearDown() {
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
+
 		PL.deleteFromS3(amazonS3Client, bucketName);
 		US.deleteFromS3(amazonS3Client, bucketName);
 		CZ.deleteFromS3(amazonS3Client, bucketName);
 		UK.deleteFromS3(amazonS3Client, bucketName);
 	}
 
-	@Test(enabled = false)
+	@Test
 	public void shouldListObjectsInBucket() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(credentials, HttpClientFactory.defaultFactory());
+		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
 
 		// When
 		Observable<ObjectListing> listing = client.listObjects(bucketName);
 		ObjectListing amazonListing = amazonS3Client.listObjects(bucketName);
 
 		// Then
-		ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing);
+		assertThat(listing)
+				.ignoreFields(fieldsToIgnore)
+				.isEqualTo(amazonListing);
 	}
 
-	@Test(enabled = false)
+	@Test
 	public void shouldListObjects() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(credentials, HttpClientFactory.defaultFactory());
+		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
 
 		// When
 		Observable<ObjectListing> listing = client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/");
 		ObjectListing amazonListing = amazonS3Client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/");
 
 		// Then
-		ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing);
+		assertThat(listing)
+				.ignoreFields(fieldsToIgnore)
+				.isEqualTo(amazonListing);
 	}
 
-	@Test(enabled = false)
+	@Test
 	public void shouldListObjectsWhenUsingRequest() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(credentials, HttpClientFactory.defaultFactory());
+		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
 
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
@@ -111,14 +130,16 @@ public class AsyncS3ClientTest {
 		ObjectListing amazonListing = amazonS3Client.listObjects(request);
 
 		// Then
-		ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing);
+		assertThat(listing)
+				.ignoreFields(fieldsToIgnore)
+				.isEqualTo(amazonListing);
 	}
 
-	@Test(enabled = false)
+	@Test
 	public void shouldListObjectBatches() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(credentials, HttpClientFactory.defaultFactory());
+		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
 
 		// When & Then
 		PublishSubject<ObjectListing> inProgressSubject = PublishSubject.create();
@@ -137,14 +158,16 @@ public class AsyncS3ClientTest {
 		});
 		listing.subscribe(inProgressSubject::onNext);
 
-		ObjectListingAssert.assertThat(completedSubject).isEqualTo(amazonListing).isNotTruncated();
+		assertThat(completedSubject)
+				.ignoreFields(fieldsToIgnore)
+				.isEqualTo(amazonListing).isNotTruncated();
 	}
 
-	@Test(enabled = false)
+	@Test
 	public void shouldListObjectBatchesWhenStartingWithARequest() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(credentials, HttpClientFactory.defaultFactory());
+		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
 
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
@@ -155,19 +178,21 @@ public class AsyncS3ClientTest {
 		ObjectListing amazonListing = amazonS3Client.listObjects(request);
 
 		while (amazonListing.isTruncated()) {
-			ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing);
+			assertThat(listing).isEqualTo(amazonListing);
 			listing = client.listNextBatchOfObjects(listing.toBlocking().single());
 			amazonListing = amazonS3Client.listNextBatchOfObjects(amazonListing);
 		}
 
-		ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing).isNotTruncated();
+		assertThat(listing)
+				.ignoreFields(fieldsToIgnore)
+				.isEqualTo(amazonListing).isNotTruncated();
 	}
 
-	@Test(enabled = false)
+	@Test
 	public void shouldListObjectWithMaxKeysLimit() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(credentials, HttpClientFactory.defaultFactory());
+		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
 
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
@@ -179,17 +204,18 @@ public class AsyncS3ClientTest {
 		ObjectListing amazonListing = amazonS3Client.listObjects(request);
 
 		// Then
-		ObjectListingAssert.assertThat(listing)
+		assertThat(listing)
+				.ignoreFields(fieldsToIgnore)
 				.isEqualTo(amazonListing)
 				.isTruncated()
 				.hasSize(2);
 	}
 
-	@Test(enabled = false)
+	@Test
 	public void shouldListObjectBatchesWhenUsingRequest() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(credentials, HttpClientFactory.defaultFactory());
+		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
 
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
@@ -201,19 +227,25 @@ public class AsyncS3ClientTest {
 		ObjectListing amazonListing = amazonS3Client.listObjects(request);
 
 		while (amazonListing.isTruncated()) {
-			ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing);
+			assertThat(listing)
+					.ignoreFields(fieldsToIgnore)
+					.isEqualTo(amazonListing);
+
 			listing = client.listNextBatchOfObjects(listing.toBlocking().single());
 			amazonListing = amazonS3Client.listNextBatchOfObjects(amazonListing);
 		}
 
-		ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing).isNotTruncated();
+		assertThat(listing)
+				.ignoreFields(fieldsToIgnore)
+				.isEqualTo(amazonListing)
+				.isNotTruncated();
 	}
 
-	@Test(enabled = false)
+	@Test
 	public void shouldReturnEmptyListingWhenNotTruncated() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(credentials, HttpClientFactory.defaultFactory());
+		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
 
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
@@ -222,8 +254,8 @@ public class AsyncS3ClientTest {
 		Observable<ObjectListing> listing = client.listObjects(request);
 		ObjectListing amazonListing = amazonS3Client.listObjects(request);
 
-		ObjectListingAssert
-				.assertThat(listing)
+		assertThat(listing)
+				.ignoreFields(fieldsToIgnore)
 				.isEqualTo(amazonListing)
 				.isNotTruncated();
 
@@ -232,14 +264,14 @@ public class AsyncS3ClientTest {
 		amazonListing = amazonS3Client.listNextBatchOfObjects(amazonListing);
 
 		// Then
-		ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing).isNotNull();
+		assertThat(listing).isEqualTo(amazonListing).isNotNull();
 	}
 
-	@Test(enabled = false)
+	@Test
 	public void shouldListCommonPrefixes() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(credentials, HttpClientFactory.defaultFactory());
+		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
 
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
@@ -251,14 +283,17 @@ public class AsyncS3ClientTest {
 		ObjectListing amazonListing = amazonS3Client.listObjects(request);
 
 		// Then
-		ObjectListingAssert.assertThat(listing).isEqualTo(amazonListing).isNotTruncated();
+		assertThat(listing)
+				.ignoreFields(fieldsToIgnore)
+				.isEqualTo(amazonListing)
+				.isNotTruncated();
 	}
 
-	@Test(enabled = false)
+	@Test
 	public void shouldPutObject() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(credentials, HttpClientFactory.defaultFactory());
+		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
 
 		String objectName = RandomStringUtils.randomAlphanumeric(55);
 		byte[] data = RandomStringUtils.randomAlphanumeric(10 * 1024).getBytes();

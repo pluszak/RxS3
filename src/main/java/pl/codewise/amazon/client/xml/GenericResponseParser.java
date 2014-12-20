@@ -1,6 +1,5 @@
 package pl.codewise.amazon.client.xml;
 
-import com.google.common.collect.Maps;
 import com.ning.http.client.Response;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -11,6 +10,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+
+import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.toMap;
 
 public abstract class GenericResponseParser<Context> {
 
@@ -21,15 +24,15 @@ public abstract class GenericResponseParser<Context> {
 	private final TagHandler<Context> unknownTagHandler;
 	private final Map<String, TagHandler<Context>> tagHandlerMap;
 
-	@SafeVarargs
-	public GenericResponseParser(XmlPullParserFactory pullParserFactory, TagHandler<Context> unknownTagHandler, TagHandler<Context>... tagHandlers) {
+	public GenericResponseParser(XmlPullParserFactory pullParserFactory, TagHandler<Context> unknownTagHandler, Map<String, TagHandler<Context>> tagHandlerMap) {
 		this.pullParserFactory = pullParserFactory;
 		this.unknownTagHandler = unknownTagHandler;
+		this.tagHandlerMap = tagHandlerMap;
+	}
 
-		tagHandlerMap = Maps.newHashMap();
-		for (TagHandler<Context> tagHandler : tagHandlers) {
-			tagHandlerMap.put(tagHandler.getTagName(), tagHandler);
-		}
+	@SafeVarargs
+	public GenericResponseParser(XmlPullParserFactory pullParserFactory, TagHandler<Context> unknownTagHandler, TagHandler<Context>... tagHandlers) {
+		this(pullParserFactory, unknownTagHandler, stream(tagHandlers).collect(toMap(TagHandler::getTagName, Function.<TagHandler<Context>>identity())));
 	}
 
 	protected void parse(InputStream responseBodyAsStream, Context context) throws IOException {

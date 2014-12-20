@@ -1,6 +1,5 @@
 package pl.codewise.amazon.client;
 
-import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -43,24 +42,24 @@ public class AsyncS3Client implements Closeable {
 
 	private final AWSSignatureCalculatorFactory signatureCalculators;
 
-	public AsyncS3Client(AWSCredentials credentials, AsyncHttpClient httpClient) {
+	public AsyncS3Client(ClientConfiguration configuration, AsyncHttpClient httpClient) {
 		this.httpClient = httpClient;
 
 		try {
 			XmlPullParserFactory pullParserFactory = XmlPullParserFactory.newInstance();
 			pullParserFactory.setNamespaceAware(false);
 
-			listResponseParser = new ListResponseParser(pullParserFactory);
+			listResponseParser = ListResponseParser.newListResponseParser(pullParserFactory, configuration);
 			errorResponseParser = new ErrorResponseParser(pullParserFactory);
 		} catch (XmlPullParserException e) {
 			throw new RuntimeException("Unable to initialize xml pull parser factory", e);
 		}
 
-		signatureCalculators = new AWSSignatureCalculatorFactory(credentials);
+		signatureCalculators = new AWSSignatureCalculatorFactory(configuration.getCredentials());
 	}
 
-	public AsyncS3Client(AWSCredentials credentials, HttpClientFactory httpClientFactory) {
-		this(credentials, httpClientFactory.getHttpClient());
+	public AsyncS3Client(ClientConfiguration configuration, HttpClientFactory httpClientFactory) {
+		this(configuration, httpClientFactory.getHttpClient());
 	}
 
 	public Observable<byte[]> putObject(String bucketName, String key, byte[] data, ObjectMetadata metadata) throws IOException {
