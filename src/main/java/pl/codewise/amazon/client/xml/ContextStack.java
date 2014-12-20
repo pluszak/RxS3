@@ -2,6 +2,7 @@ package pl.codewise.amazon.client.xml;
 
 import com.google.common.collect.Lists;
 import javolution.text.CharArray;
+import javolution.text.Cursor;
 import org.xmlpull.v1.XmlPullParser;
 import pl.codewise.amazon.client.xml.handlers.TagHandler;
 
@@ -20,6 +21,7 @@ public class ContextStack<Context> {
 
 	private final int[] parseResultStartAndLength = new int[2];
 	private final CharArray parseResultHolder = new CharArray();
+	private final Cursor cursor = new Cursor();
 
 	public TagHandler<Context> push(TagHandler<Context> handler) {
 		handlerStack.add(handler);
@@ -46,6 +48,11 @@ public class ContextStack<Context> {
 	public CharArray getTextCharacters(XmlPullParser parser) {
 		char[] characters = parser.getTextCharacters(parseResultStartAndLength);
 		return parseResultHolder.setArray(characters, parseResultStartAndLength[0], parseResultStartAndLength[1]);
+	}
+
+	public Cursor getCursor() {
+		cursor.setIndex(0);
+		return cursor;
 	}
 
 	@SuppressWarnings("unchecked")

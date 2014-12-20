@@ -4,6 +4,7 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.Owner;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import javolution.text.CharArray;
+import javolution.text.TypeFormat;
 import org.xmlpull.v1.XmlPullParser;
 import pl.codewise.amazon.client.xml.ContextStack;
 
@@ -28,7 +29,7 @@ public enum ListObjectsTagHandler implements TagHandler<ObjectListing> {
 		@Override
 		public void handleText(ObjectListing objectListing, XmlPullParser parser, ContextStack handlerStack) {
 			CharArray text = handlerStack.getTextCharacters(parser);
-			objectListing.setTruncated(text.toBoolean());
+			objectListing.setTruncated(TypeFormat.parseBoolean(text, handlerStack.getCursor()));
 		}
 	}, KEY("Key") {
 		@Override
@@ -53,7 +54,7 @@ public enum ListObjectsTagHandler implements TagHandler<ObjectListing> {
 			S3ObjectSummary summary = objectSummaries.get(objectSummaries.size() - 1);
 
 			CharArray textCharacters = handlerStack.getTextCharacters(parser);
-			summary.setSize(textCharacters.toLong());
+			summary.setSize(TypeFormat.parseLong(textCharacters, handlerStack.getCursor()));
 		}
 	}, LAST_MODIFIED("LastModified") {
 
@@ -129,7 +130,7 @@ public enum ListObjectsTagHandler implements TagHandler<ObjectListing> {
 		@Override
 		public void handleText(ObjectListing objectListing, XmlPullParser parser, ContextStack handlerStack) {
 			CharArray textCharacters = handlerStack.getTextCharacters(parser);
-			objectListing.setMaxKeys(textCharacters.toInt());
+			objectListing.setMaxKeys(TypeFormat.parseInt(textCharacters, handlerStack.getCursor()));
 		}
 	}, DELIMITER("Delimiter") {
 		@Override
