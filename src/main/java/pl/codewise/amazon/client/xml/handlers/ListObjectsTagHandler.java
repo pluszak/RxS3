@@ -7,10 +7,8 @@ import javolution.text.CharArray;
 import javolution.text.TypeFormat;
 import org.xmlpull.v1.XmlPullParser;
 import pl.codewise.amazon.client.xml.ContextStack;
+import pl.codewise.amazon.client.xml.DateTimeParser;
 
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
 
@@ -58,17 +56,16 @@ public enum ListObjectsTagHandler implements TagHandler<ObjectListing> {
 		}
 	}, LAST_MODIFIED("LastModified") {
 
-		private final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter
-				.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-				.withZone(ZoneId.of("UTC"));
+		private final DateTimeParser dateTimeParser = new DateTimeParser();
 
 		@Override
 		public void handleText(ObjectListing objectListing, XmlPullParser parser, ContextStack handlerStack) {
 			List<S3ObjectSummary> objectSummaries = objectListing.getObjectSummaries();
 			S3ObjectSummary summary = objectSummaries.get(objectSummaries.size() - 1);
 
-			Instant dateTime = DATE_FORMATTER.parse(parser.getText(), Instant::from);
-			summary.setLastModified(new Date(dateTime.toEpochMilli()));
+			CharArray text = handlerStack.getTextCharacters(parser);
+			Date lastModified = dateTimeParser.parse(text, handlerStack.getCursor(), handlerStack.getCalendar());
+			summary.setLastModified(lastModified);
 		}
 	}, STORAGE_CLASS("StorageClass") {
 		@Override

@@ -6,6 +6,7 @@ import javolution.text.Cursor;
 import org.xmlpull.v1.XmlPullParser;
 import pl.codewise.amazon.client.xml.handlers.TagHandler;
 
+import java.util.Calendar;
 import java.util.List;
 
 public class ContextStack<Context> {
@@ -22,6 +23,7 @@ public class ContextStack<Context> {
 	private final int[] parseResultStartAndLength = new int[2];
 	private final CharArray parseResultHolder = new CharArray();
 	private final Cursor cursor = new Cursor();
+	private final Calendar calendar = Calendar.getInstance();
 
 	public TagHandler<Context> push(TagHandler<Context> handler) {
 		handlerStack.add(handler);
@@ -53,6 +55,10 @@ public class ContextStack<Context> {
 	public Cursor getCursor() {
 		cursor.setIndex(0);
 		return cursor;
+	}
+
+	public Calendar getCalendar() {
+		return calendar;
 	}
 
 	@SuppressWarnings("unchecked")
