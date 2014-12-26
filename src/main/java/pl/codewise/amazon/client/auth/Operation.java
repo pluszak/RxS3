@@ -6,16 +6,26 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 
 public enum Operation {
-	GET, PUT {
+	GET,
+	PUT {
 		@Override
-		public String getResourceName(String bucketName, Request request) {
+		public void getResourceName(StringBuilder builder, Request request) {
 			String objectName = request.getURI().getPath();
-			return "/" + bucketName + objectName;
+			builder.append(objectName);
 		}
-	}, LIST("GET"), DELETE, BULK_DELETE("POST") {
+	},
+	LIST("GET") {
 		@Override
-		public String getResourceName(String bucketName, Request request) {
-			return super.getResourceName(bucketName, request) + "?delete";
+		public void getResourceName(StringBuilder builder, Request request) {
+			builder.append('/');
+		}
+	},
+	DELETE,
+	BULK_DELETE("POST") {
+		@Override
+		public void getResourceName(StringBuilder builder, Request request) {
+			super.getResourceName(builder, request);
+			builder.append("?delete");
 		}
 	};
 
@@ -29,11 +39,7 @@ public enum Operation {
 		this.operationName = operationName;
 	}
 
-	public String getResourceName(String bucketName, Request request) {
-		if (this == LIST) {
-			return "/" + bucketName + "/";
-		}
-
+	public void getResourceName(StringBuilder builder, Request request) {
 		String objectName = request.getURI().getPath();
 		objectName = objectName.substring(1);
 		try {
@@ -42,7 +48,7 @@ public enum Operation {
 			throw new RuntimeException(e);
 		}
 
-		return "/" + bucketName + objectName;
+		builder.append(objectName);
 	}
 
 	public String getOperationName() {

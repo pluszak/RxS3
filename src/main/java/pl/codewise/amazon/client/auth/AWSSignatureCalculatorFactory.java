@@ -4,29 +4,37 @@ import com.amazonaws.auth.AWSCredentials;
 
 public class AWSSignatureCalculatorFactory {
 
-	private AWSCredentials credentials;
+	private final AWSSignatureCalculator getSignatureCalculator;
+	private final AWSSignatureCalculator putSignatureCalculator;
+	private final AWSSignatureCalculator listSignatureCalculator;
+	private final AWSSignatureCalculator deleteSignatureCalculator;
+	private final AWSSignatureCalculator bulkDeleteSignatureCalculator;
 
 	public AWSSignatureCalculatorFactory(AWSCredentials credentials) {
-		this.credentials = credentials;
+		getSignatureCalculator = new AWSSignatureCalculator(credentials, Operation.GET);
+		putSignatureCalculator = new AWSSignatureCalculator(credentials, Operation.PUT);
+		listSignatureCalculator = new AWSSignatureCalculator(credentials, Operation.LIST);
+		deleteSignatureCalculator = new AWSSignatureCalculator(credentials, Operation.DELETE);
+		bulkDeleteSignatureCalculator = new AWSSignatureCalculator(credentials, Operation.BULK_DELETE);
 	}
 
-	public AWSSignatureCalculator getGetSignatureCalculator(String bucketName) {
-		return new AWSSignatureCalculator(credentials, bucketName, Operation.GET);
+	public AWSSignatureCalculator getGetSignatureCalculator() {
+		return getSignatureCalculator;
 	}
 
-	public AWSSignatureCalculator getPutSignatureCalculator(String bucketName) {
-		return new AWSSignatureCalculator(credentials, bucketName, Operation.PUT);
+	public AWSSignatureCalculator getPutSignatureCalculator() {
+		return putSignatureCalculator;
 	}
 
-	public AWSSignatureCalculator getListSignatureCalculator(String bucketName) {
-		return new AWSSignatureCalculator(credentials, bucketName, Operation.LIST);
+	public AWSSignatureCalculator getListSignatureCalculator() {
+		return listSignatureCalculator;
 	}
 
-	public AWSSignatureCalculator getDeleteSignatureCalculator(String bucketName) {
-		return new AWSSignatureCalculator(credentials, bucketName, Operation.DELETE);
+	public AWSSignatureCalculator getDeleteSignatureCalculator() {
+		return deleteSignatureCalculator;
 	}
 
-	public AWSSignatureCalculator getBulkDeleteSignatureCalculator(String bucketName) {
-		return new AWSSignatureCalculator(credentials, bucketName, Operation.BULK_DELETE);
+	public AWSSignatureCalculator getBulkDeleteSignatureCalculator() {
+		return bulkDeleteSignatureCalculator;
 	}
 }

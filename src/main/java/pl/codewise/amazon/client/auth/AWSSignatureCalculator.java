@@ -10,6 +10,7 @@ import org.apache.commons.lang3.time.FastDateFormat;
 import org.bouncycastle.crypto.digests.SHA1Digest;
 import org.bouncycastle.crypto.macs.HMac;
 import org.bouncycastle.crypto.params.KeyParameter;
+import pl.codewise.amazon.client.AsyncS3Client;
 
 import java.util.List;
 import java.util.Locale;
@@ -22,20 +23,19 @@ public class AWSSignatureCalculator implements SignatureCalculator {
 	public final static String HEADER_DATE = "Date";
 
 	private final String accessKey;
-	private final String secretKey;
+	private final KeyParameter keyParameter;
 
-	private final String bucketName;
 	private final Operation operation;
 
-	public AWSSignatureCalculator(String accessKey, String secretKey, String bucketName, Operation operation) {
+	public AWSSignatureCalculator(String accessKey, String secretKey, Operation operation) {
 		this.accessKey = accessKey;
-		this.secretKey = secretKey;
-		this.bucketName = bucketName;
+		this.keyParameter = new KeyParameter(secretKey.getBytes());
+
 		this.operation = operation;
 	}
 
-	public AWSSignatureCalculator(AWSCredentials credentials, String bucketName, Operation operation) {
-		this(credentials.getAWSAccessKeyId(), credentials.getAWSSecretKey(), bucketName, operation);
+	public AWSSignatureCalculator(AWSCredentials credentials, Operation operation) {
+		this(credentials.getAWSAccessKeyId(), credentials.getAWSSecretKey(), operation);
 	}
 
 	@SuppressWarnings("StringBufferReplaceableByString")
@@ -55,29 +55,31 @@ public class AWSSignatureCalculator implements SignatureCalculator {
 		}
 
 		String dateString = RFC_822_DATE_FORMAT.format(System.currentTimeMillis());
-		String stringToSign = new StringBuilder().append(operation.getOperationName())
-				.append("\n")
+		StringBuilder stringToSignBuilder = new StringBuilder().append(operation.getOperationName())
+				.append('\n')
 				.append(contentMd5)
-				.append("\n")
+				.append('\n')
 				.append(contentType)
-				.append("\n")
-				.append(dateString).append("\n")
-				.append(operation.getResourceName(bucketName, request)).toString();
+				.append('\n')
+				.append(dateString)
+				.append('\n')
+				.append('/');
 
-		String authorization = calculateRFC2104HMAC(stringToSign, secretKey);
+		String virtualHost = request.getVirtualHost();
+		stringToSignBuilder.append(virtualHost, 0, virtualHost.length() - AsyncS3Client.S3_LOCATION.length() - 1);
+		operation.getResourceName(stringToSignBuilder, request);
 
-		requestBuilder.addHeader(HEADER_DATE, dateString);
+		String authorization = calculateRFC2104HMAC(stringToSignBuilder.toString(), keyParameter);
 		requestBuilder.addHeader(HEADER_AUTHORIZATION, "AWS " + accessKey + ":" + authorization);
+		requestBuilder.addHeader(HEADER_DATE, dateString);
 	}
 
-	public static String calculateRFC2104HMAC(String data, String key) {
+	public static String calculateRFC2104HMAC(String stringToSign, KeyParameter keyParameter) {
 		HMac hmac = new HMac(new SHA1Digest());
-
-		KeyParameter keyParameter = new KeyParameter(key.getBytes());
 		hmac.init(keyParameter);
 
-		byte[] bytes = data.getBytes();
-		hmac.update(data.getBytes(), 0, bytes.length);
+		byte[] bytes = stringToSign.getBytes();
+		hmac.update(stringToSign.getBytes(), 0, bytes.length);
 
 		byte[] result = new byte[hmac.getMacSize()];
 		hmac.doFinal(result, 0);

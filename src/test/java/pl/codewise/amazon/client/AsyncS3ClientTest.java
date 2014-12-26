@@ -18,6 +18,7 @@ import rx.Observable;
 import rx.Subscriber;
 import rx.subjects.PublishSubject;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
 
@@ -312,6 +313,56 @@ public class AsyncS3ClientTest {
 		S3Object object = amazonS3Client.getObject(bucketName, objectName);
 		byte[] actual = IOUtils.toByteArray(object.getObjectContent());
 
+		assertThat(actual).isEqualTo(data);
+	}
+
+	@Test(enabled = false)
+	public void shouldGetObject() throws IOException {
+		// Given
+		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
+		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
+
+		String objectName = RandomStringUtils.randomAlphanumeric(55);
+		byte[] data = RandomStringUtils.randomAlphanumeric(10 * 1024).getBytes();
+
+		ObjectMetadata metadata = new ObjectMetadata();
+		metadata.setContentLength(data.length);
+		metadata.setContentType("application/octet-stream");
+		metadata.setContentMD5(getBase64EncodedMD5Hash(data));
+
+		amazonS3Client.putObject(bucketName, objectName, new ByteArrayInputStream(data), metadata);
+
+		// When
+		byte[] actual = client.getObject(bucketName, objectName)
+				.toBlocking()
+				.single();
+
+		// Then
+		assertThat(actual).isEqualTo(data);
+	}
+
+	@Test(enabled = false)
+	public void shouldDeleteObject() throws IOException {
+		// Given
+		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
+		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
+
+		String objectName = RandomStringUtils.randomAlphanumeric(55);
+		byte[] data = RandomStringUtils.randomAlphanumeric(10 * 1024).getBytes();
+
+		ObjectMetadata metadata = new ObjectMetadata();
+		metadata.setContentLength(data.length);
+		metadata.setContentType("application/octet-stream");
+		metadata.setContentMD5(getBase64EncodedMD5Hash(data));
+
+		amazonS3Client.putObject(bucketName, objectName, new ByteArrayInputStream(data), metadata);
+
+		// When
+		byte[] actual = client.getObject(bucketName, objectName)
+				.toBlocking()
+				.single();
+
+		// Then
 		assertThat(actual).isEqualTo(data);
 	}
 
