@@ -3,10 +3,8 @@ package pl.codewise.amazon.client;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.ning.http.client.AsyncCompletionHandler;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.Request;
-import com.ning.http.client.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xmlpull.v1.XmlPullParserException;
@@ -14,12 +12,10 @@ import org.xmlpull.v1.XmlPullParserFactory;
 import pl.codewise.amazon.client.auth.AWSSignatureCalculatorFactory;
 import pl.codewise.amazon.client.xml.*;
 import rx.Observable;
-import rx.Observer;
 import rx.Subscriber;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Optional;
 
 import static pl.codewise.amazon.client.RestUtils.createQueryString;
 import static pl.codewise.amazon.client.RestUtils.escape;
@@ -208,7 +204,7 @@ public class AsyncS3Client implements Closeable {
 
 	private <T> void retrieveResult(final Request request, final GenericResponseParser<T> responseParser, Subscriber<? super T> observer) {
 		try {
-			httpClient.executeRequest(request, new SubscriptionCompletionHandler<>(observer, responseParser));
+			httpClient.executeRequest(request, new SubscriptionCompletionHandler<>(observer, responseParser, errorResponseParser));
 		} catch (IOException e) {
 			observer.onError(e);
 		}
@@ -217,66 +213,10 @@ public class AsyncS3Client implements Closeable {
 	private <T> Observable<T> retrieveResult(final Request request, final GenericResponseParser<T> responseParser) {
 		return Observable.create((Subscriber<? super T> subscriber) -> {
 			try {
-				httpClient.executeRequest(request, new SubscriptionCompletionHandler<>(subscriber, responseParser));
+				httpClient.executeRequest(request, new SubscriptionCompletionHandler<>(subscriber, responseParser, errorResponseParser));
 			} catch (IOException e) {
 				subscriber.onError(e);
 			}
 		});
-	}
-
-	private class SubscriptionCompletionHandler<T> extends AsyncCompletionHandler<T> {
-
-		private final Subscriber<? super T> subscriber;
-		private final GenericResponseParser<T> responseParser;
-
-		public SubscriptionCompletionHandler(Subscriber<? super T> subscriber, GenericResponseParser<T> responseParser) {
-			this.subscriber = subscriber;
-			this.responseParser = responseParser;
-		}
-
-		@Override
-		public T onCompleted(Response response) throws IOException {
-			if (LOGGER.isTraceEnabled()) {
-				LOGGER.trace("Amazon response '{}'", response.getResponseBody());
-			}
-
-			if (subscriber.isUnsubscribed()) {
-				return ignoreReturnValue();
-			}
-
-			if (!emitExceptionIfUnsuccessful(response, subscriber)) {
-				try {
-					Optional<T> result = responseParser.parse(response);
-					if (result.isPresent()) {
-						subscriber.onNext(result.get());
-					}
-
-					subscriber.onCompleted();
-				} catch (Exception e) {
-					subscriber.onError(e);
-				}
-			}
-
-			return ignoreReturnValue();
-		}
-
-		@Override
-		public void onThrowable(Throwable t) {
-			LOGGER.error("Error while processing S3 request", t);
-			subscriber.onError(t);
-		}
-
-		private boolean emitExceptionIfUnsuccessful(Response response, Observer<?> observer) throws IOException {
-			if (response.getStatusCode() != 200 && response.getStatusCode() != 204) {
-				observer.onError(errorResponseParser.parse(response).get().build());
-				return true;
-			}
-
-			return false;
-		}
-
-		T ignoreReturnValue() {
-			return null;
-		}
 	}
 }
