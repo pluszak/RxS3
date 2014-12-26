@@ -12,10 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 import pl.codewise.amazon.client.auth.AWSSignatureCalculatorFactory;
-import pl.codewise.amazon.client.xml.ConsumeBytesParser;
-import pl.codewise.amazon.client.xml.ErrorResponseParser;
-import pl.codewise.amazon.client.xml.GenericResponseParser;
-import pl.codewise.amazon.client.xml.ListResponseParser;
+import pl.codewise.amazon.client.xml.*;
 import rx.Observable;
 import rx.Observer;
 import rx.Subscriber;
@@ -188,6 +185,18 @@ public class AsyncS3Client implements Closeable {
 		return retrieveResult(request, ConsumeBytesParser.getInstance());
 	}
 
+	public Observable<?> deleteObject(String bucketName, String location) throws IOException {
+		String virtualHost = getVirtualHost(bucketName);
+		String url = S3_URL + "/" + escape(location);
+
+		Request request = httpClient.prepareDelete(url)
+				.setVirtualHost(virtualHost)
+				.setSignatureCalculator(signatureCalculators.getDeleteSignatureCalculator())
+				.build();
+
+		return retrieveResult(request, DiscardBytesParser.getInstance());
+	}
+
 	@Override
 	public void close() {
 		httpClient.close();
@@ -258,7 +267,7 @@ public class AsyncS3Client implements Closeable {
 		}
 
 		private boolean emitExceptionIfUnsuccessful(Response response, Observer<?> observer) throws IOException {
-			if (response.getStatusCode() != 200) {
+			if (response.getStatusCode() != 200 && response.getStatusCode() != 204) {
 				observer.onError(errorResponseParser.parse(response).get().build());
 				return true;
 			}

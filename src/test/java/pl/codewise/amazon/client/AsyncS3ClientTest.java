@@ -7,6 +7,7 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import com.google.common.collect.Lists;
+import com.googlecode.catchexception.CatchException;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
@@ -21,6 +22,7 @@ import rx.subjects.PublishSubject;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import static pl.codewise.amazon.client.AsyncS3ClientAssertions.assertThat;
 
@@ -342,7 +344,7 @@ public class AsyncS3ClientTest {
 	}
 
 	@Test(enabled = false)
-	public void shouldDeleteObject() throws IOException {
+	public void shouldDeleteObject() throws IOException, ExecutionException, InterruptedException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
 		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
@@ -358,12 +360,13 @@ public class AsyncS3ClientTest {
 		amazonS3Client.putObject(bucketName, objectName, new ByteArrayInputStream(data), metadata);
 
 		// When
-		byte[] actual = client.getObject(bucketName, objectName)
+		client.deleteObject(bucketName, objectName)
 				.toBlocking()
-				.single();
+				.singleOrDefault(null);
 
 		// Then
-		assertThat(actual).isEqualTo(data);
+		CatchException.catchException(amazonS3Client).getObject(bucketName, objectName);
+		assertThat(CatchException.<Exception>caughtException()).hasMessageContaining("The specified key does not exist.");
 	}
 
 	private String getBase64EncodedMD5Hash(byte[] packet) {
