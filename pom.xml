@@ -4,7 +4,7 @@
 
 	<groupId>pl.codewise</groupId>
 	<artifactId>rxs3</artifactId>
-	<version>0.1.15</version>
+	<version>0.1.15-SNAPSHOT</version>
 
 	<prerequisites>
 		<maven>3.0.4</maven>
@@ -21,7 +21,7 @@
 		<connection>scm:git:https://github.com/tkowalcz/RxS3.git</connection>
 		<developerConnection>scm:git:https://github.com/tkowalcz/RxS3.git</developerConnection>
 		<url>https://github.com/tkowalcz/RxS3</url>
-		<tag>rxs3-0.1.15</tag>
+		<tag>HEAD</tag>
 	</scm>
 
 	<distributionManagement>
