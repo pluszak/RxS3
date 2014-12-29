@@ -2,14 +2,13 @@ package pl.codewise.amazon.client.auth;
 
 import com.ning.http.client.Request;
 import javolution.text.TextBuilder;
-import pl.codewise.amazon.client.utils.UTF8UrlEncoder;
 
 public enum Operation {
 	GET,
 	PUT {
 		@Override
 		public void getResourceName(TextBuilder builder, Request request) {
-			String objectName = request.getURI().getPath();
+			String objectName = request.getUri().getPath();
 			builder.append(objectName);
 		}
 	},
@@ -41,8 +40,8 @@ public enum Operation {
 	public void getResourceName(TextBuilder builder, Request request) {
 		builder.append('/');
 
-		String objectName = request.getURI().getPath();
-		UTF8UrlEncoder.appendEncoded(builder, objectName, 1);
+		String objectName = request.getUri().getPath();
+		builder.append(objectName, 1, objectName.length());
 	}
 
 	public String getOperationName() {

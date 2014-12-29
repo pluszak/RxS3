@@ -46,9 +46,9 @@ public class AWSSignatureCalculator implements SignatureCalculator {
 
 	@SuppressWarnings("StringBufferReplaceableByString")
 	@Override
-	public void calculateAndAddSignature(String url, Request request, RequestBuilderBase<?> requestBuilder) {
+	public void calculateAndAddSignature(Request request, RequestBuilderBase<?> requestBuilder) {
 		try {
-			calculateAndAddSignature(request, requestBuilder);
+			calculateAndAddSignatureInternal(request, requestBuilder);
 		} finally {
 			stringToSignBuilder.clear();
 			Arrays.fill(signingResultHolder, (byte) 0);
@@ -56,7 +56,7 @@ public class AWSSignatureCalculator implements SignatureCalculator {
 		}
 	}
 
-	private void calculateAndAddSignature(Request request, RequestBuilderBase<?> requestBuilder) {
+	private void calculateAndAddSignatureInternal(Request request, RequestBuilderBase<?> requestBuilder) {
 		String contentMd5 = "";
 		String contentType = "";
 
