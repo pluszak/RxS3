@@ -1,29 +1,28 @@
 package pl.codewise.amazon.client.auth;
 
 import com.ning.http.client.Request;
-
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
+import javolution.text.TextBuilder;
+import pl.codewise.amazon.client.utils.UTF8UrlEncoder;
 
 public enum Operation {
 	GET,
 	PUT {
 		@Override
-		public void getResourceName(StringBuilder builder, Request request) {
+		public void getResourceName(TextBuilder builder, Request request) {
 			String objectName = request.getURI().getPath();
 			builder.append(objectName);
 		}
 	},
 	LIST("GET") {
 		@Override
-		public void getResourceName(StringBuilder builder, Request request) {
+		public void getResourceName(TextBuilder builder, Request request) {
 			builder.append('/');
 		}
 	},
 	DELETE,
 	BULK_DELETE("POST") {
 		@Override
-		public void getResourceName(StringBuilder builder, Request request) {
+		public void getResourceName(TextBuilder builder, Request request) {
 			super.getResourceName(builder, request);
 			builder.append("?delete");
 		}
@@ -39,16 +38,11 @@ public enum Operation {
 		this.operationName = operationName;
 	}
 
-	public void getResourceName(StringBuilder builder, Request request) {
-		String objectName = request.getURI().getPath();
-		objectName = objectName.substring(1);
-		try {
-			objectName = "/" + URLEncoder.encode(objectName, "UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			throw new RuntimeException(e);
-		}
+	public void getResourceName(TextBuilder builder, Request request) {
+		builder.append('/');
 
-		builder.append(objectName);
+		String objectName = request.getURI().getPath();
+		UTF8UrlEncoder.appendEncoded(builder, objectName, 1);
 	}
 
 	public String getOperationName() {

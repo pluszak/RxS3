@@ -33,7 +33,7 @@ public class AsyncS3Client implements Closeable {
 	private final ListResponseParser listResponseParser;
 	private final ErrorResponseParser errorResponseParser;
 
-	private final AWSSignatureCalculatorFactory signatureCalculators;
+	private final ThreadLocal<AWSSignatureCalculatorFactory> signatureCalculators;
 
 	public AsyncS3Client(ClientConfiguration configuration, AsyncHttpClient httpClient) {
 		this.httpClient = httpClient;
@@ -48,7 +48,12 @@ public class AsyncS3Client implements Closeable {
 			throw new RuntimeException("Unable to initialize xml pull parser factory", e);
 		}
 
-		signatureCalculators = new AWSSignatureCalculatorFactory(configuration.getCredentials());
+		signatureCalculators = new ThreadLocal<AWSSignatureCalculatorFactory>() {
+			@Override
+			protected AWSSignatureCalculatorFactory initialValue() {
+				return new AWSSignatureCalculatorFactory(configuration.getCredentials());
+			}
+		};
 	}
 
 	public AsyncS3Client(ClientConfiguration configuration, HttpClientFactory httpClientFactory) {
@@ -60,7 +65,7 @@ public class AsyncS3Client implements Closeable {
 
 		Request request = httpClient.preparePut(S3_URL + "/" + key)
 				.setVirtualHost(virtualHost)
-				.setSignatureCalculator(signatureCalculators.getPutSignatureCalculator())
+				.setSignatureCalculator(signatureCalculators.get().getPutSignatureCalculator())
 				.setBody(data)
 				.setContentLength((int) metadata.getContentLength())
 				.setHeader("Content-MD5", metadata.getContentMD5())
@@ -84,7 +89,7 @@ public class AsyncS3Client implements Closeable {
 
 		Request request = httpClient.prepareGet(S3_URL + "/?" + queryString)
 				.setVirtualHost(virtualHost)
-				.setSignatureCalculator(signatureCalculators.getListSignatureCalculator())
+				.setSignatureCalculator(signatureCalculators.get().getListSignatureCalculator())
 				.build();
 
 		retrieveResult(request, listResponseParser, subscriber);
@@ -96,7 +101,7 @@ public class AsyncS3Client implements Closeable {
 
 		Request request = httpClient.prepareGet(S3_URL + "/?" + queryString)
 				.setVirtualHost(virtualHost)
-				.setSignatureCalculator(signatureCalculators.getListSignatureCalculator())
+				.setSignatureCalculator(signatureCalculators.get().getListSignatureCalculator())
 				.build();
 
 		return retrieveResult(request, listResponseParser);
@@ -151,7 +156,7 @@ public class AsyncS3Client implements Closeable {
 
 		Request request = httpClient.prepareGet(S3_URL + "/?" + queryString)
 				.setVirtualHost(virtualHost)
-				.setSignatureCalculator(signatureCalculators.getListSignatureCalculator())
+				.setSignatureCalculator(signatureCalculators.get().getListSignatureCalculator())
 				.build();
 
 		retrieveResult(request, listResponseParser, observer);
@@ -163,7 +168,7 @@ public class AsyncS3Client implements Closeable {
 
 		Request request = httpClient.prepareGet(S3_URL + "/?" + queryString)
 				.setVirtualHost(virtualHost)
-				.setSignatureCalculator(signatureCalculators.getListSignatureCalculator())
+				.setSignatureCalculator(signatureCalculators.get().getListSignatureCalculator())
 				.build();
 
 		return retrieveResult(request, listResponseParser);
@@ -175,7 +180,7 @@ public class AsyncS3Client implements Closeable {
 
 		Request request = httpClient.prepareGet(url)
 				.setVirtualHost(virtualHost)
-				.setSignatureCalculator(signatureCalculators.getGetSignatureCalculator())
+				.setSignatureCalculator(signatureCalculators.get().getGetSignatureCalculator())
 				.build();
 
 		return retrieveResult(request, ConsumeBytesParser.getInstance());
@@ -187,7 +192,7 @@ public class AsyncS3Client implements Closeable {
 
 		Request request = httpClient.prepareDelete(url)
 				.setVirtualHost(virtualHost)
-				.setSignatureCalculator(signatureCalculators.getDeleteSignatureCalculator())
+				.setSignatureCalculator(signatureCalculators.get().getDeleteSignatureCalculator())
 				.build();
 
 		return retrieveResult(request, DiscardBytesParser.getInstance());
