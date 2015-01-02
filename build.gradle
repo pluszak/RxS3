@@ -1,0 +1,51 @@
+apply plugin: 'java'
+
+repositories {
+    mavenCentral()
+}
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.0'
+    }
+}
+
+apply plugin: 'com.jfrog.bintray'
+
+compileJava {
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+}
+
+jar {
+    baseName = 'pl.codewise.rxs3'
+    version = '0.1.21'
+}
+
+dependencies {
+    compile('com.amazonaws:aws-java-sdk-s3:1.9.3') {
+        exclude group: 'log4j'
+    }
+    compile group: 'com.ning', name: 'async-http-client', version: '1.9.3'
+    compile group: 'com.google.guava', name: 'guava', version: '18.0'
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.1'
+    compile group: 'commons-io', name: 'commons-io', version: '2.4'
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.5'
+    compile group: 'org.bouncycastle', name: 'bcprov-jdk15', version: '1.45'
+    compile group: 'xpp3', name: 'xpp3', version: '1.1.4c'
+    compile group: 'com.netflix.rxjava', name: 'rxjava-core', version: '0.20.5'
+    compile group: 'org.javolution', name: 'javolution-core-java', version: '6.0.0'
+
+    testCompile group: 'org.testng', name: 'testng', version: '6.8'
+    testCompile group: 'org.easytesting', name: 'fest-assert', version: '1.4'
+    testCompile group: 'org.assertj', name: 'assertj-core', version: '1.6.0'
+    testCompile group: 'com.googlecode.catch-exception', name: 'catch-exception', version: '1.2.0'
+
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.1'
+}
