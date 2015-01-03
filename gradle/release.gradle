@@ -36,7 +36,7 @@ task("release") {
              - see 'TROUBLESHOOTING' section at the top of this file
         */
         run "git", "checkout", "master"
-        run "git", "merge", "v$currentVersion" as String, "--squash", "--no-commit"
+        run "git", "merge", "rxs3-$currentVersion" as String, "--squash", "--no-commit"
         commitIncrementedVersion(currentVersion, buildInfo)
 
         def pushCommandLine = ["git", "push", pushTarget]
