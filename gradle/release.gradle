@@ -21,7 +21,9 @@ task("release") {
         String currentVersion = project.version //the version loaded when Gradle build has started
         String buildInfo = "by CI build $System.env.BUILD_NUMBER [ci skip]"
 
-        MaskedArg pushTarget = new MaskedArg(value: "https://tkowalcz:${System.env.GH_TOKEN}@github.com/tkowalcz/RxS3.git")
+        String encodedGithubToken = URLEncoder.encode(System.env.GH_TOKEN, "UTF-8")
+        encodedGithubToken
+        MaskedArg pushTarget = new MaskedArg(value: "https://tkowalcz:${encodedGithubToken}@github.com/tkowalcz/RxS3.git")
 
         configureGit()
         createTag(currentVersion, buildInfo)
@@ -47,7 +49,7 @@ task("release") {
 }
 
 private void createTag(String currentVersion, String buildInfo) {
-    String tag = "v${currentVersion}"
+    String tag = "rxs3-${currentVersion}"
     String tagMessage = "Create tag $tag ${buildInfo}"
     run "git", "tag", "-a", tag, "-m", "$tagMessage" as String
 }
