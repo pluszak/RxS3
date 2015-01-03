@@ -1,0 +1,78 @@
+assert project == rootProject
+
+apply from: rootProject.file("gradle/publish.gradle")
+def dryRun = project.hasProperty('dryRun')
+
+bintrayUpload {
+    doFirst {
+        if (dryRun) {
+            logger.lifecycle "Dry-running the release"
+        }
+    }
+}
+
+task("release") {
+    dependsOn bintrayUpload
+    doLast {
+        if (dryRun) {
+            logger.lifecycle "Dry-running the release"
+        }
+
+        String currentVersion = project.version //the version loaded when Gradle build has started
+        String buildInfo = "by CI build $System.env.BUILD_NUMBER [ci skip]"
+        MaskedArg pushTarget = new MaskedArg(value: "https://tkowalcz:${System.env.GH_TOKEN}@github.com/tkowalcz/RxS3.git")
+
+        configureGit()
+        createTag(currentVersion, buildInfo)
+
+        /*
+            Now we'll start operating on master. This introduces a problem - someone might have pushed changes *after* release process has started
+            What can happen:
+             - bintrayUpload will fail saying that the version is already released
+             - git push fails saying that the pull is needed
+            Resolutions:
+             - see 'TROUBLESHOOTING' section at the top of this file
+        */
+        run "git", "checkout", "master"
+        run "git", "merge", "v$currentVersion" as String, "--squash", "--no-commit"
+        commitIncrementedVersion(currentVersion, buildInfo)
+
+        def pushCommandLine = ["git", "push", pushTarget]
+        if (dryRun) {
+            pushCommandLine << '--dry-run'
+        }
+        run pushCommandLine
+    }
+}
+
+private void createTag(String currentVersion, String buildInfo) {
+    String tag = "v${currentVersion}"
+    String tagMessage = "Create tag $tag ${buildInfo}"
+    run "git", "tag", "-a", tag, "-m", "$tagMessage" as String
+}
+
+private void configureGit() {
+    run "git", "config", "user.email", "continuous.delivery.drone@gmail.com"
+    run "git", "config", "user.name", "Continuous Delivery Drone"
+}
+
+private void commitIncrementedVersion(String currentVersion, String buildInfo) {
+    String nextVersion = project.incrementVersion()
+    String message = "Increment version '$currentVersion' -> '$nextVersion' $buildInfo"
+    run "git", "commit", "-m", "$message" as String, "version.properties"
+}
+
+void run(Object ... args) {
+    run(args as List)
+}
+
+void run(Collection args) {
+    logger.lifecycle("--- Executing: {}", args.join(" "))
+    exec { commandLine args.collect { it instanceof MaskedArg? it.value : it.toString()} }
+    logger.lifecycle("--- Completed!", args)
+}
+
+class MaskedArg {
+    String value
+    String toString() { "<masked>" }
+}

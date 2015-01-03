@@ -1,0 +1,28 @@
+apply plugin: 'com.jfrog.bintray'
+
+//if the build fails, we don't want to publish
+tasks.bintrayUpload.mustRunAfter "build"
+
+//if upload fails, don't increment version
+tasks.incrementVersion.mustRunAfter tasks.bintrayUpload
+
+bintray {
+    user = 'kowalczewski'
+    key = System.env.BINTRAY_API_KEY
+
+    publications = ['mavenJava']
+
+    dryRun = project.hasProperty('dryRun')
+    publish = true
+
+    pkg {
+        repo = 'RxS3'
+        name = 'RxS3'
+        desc = 'Lightweight AmazonS3 client '
+        websiteUrl = 'http://tkowalcz.github.io/RxS3/'
+        vcsUrl = 'https://github.com/tkowalcz/RxS3.git'
+        licenses = ['Apache-2.0']
+        labels = ['s3', 'reactive', 'async', 'lightweight']
+        publicDownloadNumbers = true
+    }
+}
