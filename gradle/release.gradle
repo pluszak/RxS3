@@ -20,6 +20,7 @@ task("release") {
 
         String currentVersion = project.version //the version loaded when Gradle build has started
         String buildInfo = "by CI build $System.env.BUILD_NUMBER [ci skip]"
+
         MaskedArg pushTarget = new MaskedArg(value: "https://tkowalcz:${System.env.GH_TOKEN}@github.com/tkowalcz/RxS3.git")
 
         configureGit()
