@@ -6,4 +6,4 @@ deployment:
   production:
     branch: master
     commands:
-      - ./gradle release
+      - ./gradlew release
