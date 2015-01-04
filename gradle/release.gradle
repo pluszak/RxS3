@@ -42,7 +42,7 @@ task("release") {
         def status = ["git", "status"]
         run status
 
-        def pushCommandLine = ["git", "push", "-q", "--tags", pushTarget]
+        def pushCommandLine = ["git", "push", pushTarget, "master", "rxs3-$currentVersion", "-q"]
         if (dryRun) {
             pushCommandLine << '--dry-run'
         }
