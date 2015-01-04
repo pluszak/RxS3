@@ -39,11 +39,15 @@ task("release") {
         run "git", "merge", "rxs3-$currentVersion" as String, "--squash", "--no-commit"
         commitIncrementedVersion(currentVersion, buildInfo)
 
+        def status = ["git", "status"]
+        run status
+
         def pushCommandLine = ["git", "push", "-q", "--tags", pushTarget]
         if (dryRun) {
             pushCommandLine << '--dry-run'
         }
         run pushCommandLine
+        run status
     }
 }
 
