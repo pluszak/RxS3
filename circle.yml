@@ -6,4 +6,5 @@ deployment:
   production:
     branch: master
     commands:
+      - chmod u+x gradlew
       - ./gradlew release
