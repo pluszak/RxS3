@@ -15,6 +15,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
+import pl.codewise.amazon.fakes3.FakeS3;
 import rx.Observable;
 import rx.Subscriber;
 import rx.subjects.PublishSubject;
@@ -44,9 +45,13 @@ public class AsyncS3ClientTest {
 	protected ClientConfiguration configuration;
 
 	protected List<String> fieldsToIgnore = Lists.newArrayList();
+	private FakeS3 fakeS3;
+	private AmazonS3Client amazonS3Client;
+	private AsyncS3Client client;
 
 	@BeforeClass
 	public void setUpCredentialsAndBucketName() {
+//		fakeS3 = new FakeS3();
 		String accessKey = System.getProperty(ACCESS_KEY_PROPERTY_NAME);
 		assertThat(accessKey).isNotNull();
 
@@ -56,12 +61,13 @@ public class AsyncS3ClientTest {
 		bucketName = System.getProperty(BUCKET_NAME_PROPERTY_NAME);
 		assertThat(bucketName).isNotNull();
 		credentials = new BasicAWSCredentials(accessKey, secretKey);
+
+		amazonS3Client = new AmazonS3Client(credentials);
+		amazonS3Client.setEndpoint("http://127.0.0.1:12345");// + fakeS3.getLocalPort());
 	}
 
 	@BeforeClass(dependsOnMethods = "setUpCredentialsAndBucketName")
 	public void setUpS3Contents() throws IOException {
-		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-
 		PL.putToS3(amazonS3Client, bucketName);
 		US.putToS3(amazonS3Client, bucketName);
 		CZ.putToS3(amazonS3Client, bucketName);
@@ -72,25 +78,26 @@ public class AsyncS3ClientTest {
 	public void setUpConfigurationThatDoesNotSkipTags() throws IOException {
 		configuration = ClientConfiguration
 				.builder()
+				.connectTo("localhost:12345")// + fakeS3.getLocalPort())
 				.useCredentials(credentials)
 				.build();
+
+		client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
 	}
 
 	@AfterClass
 	public void tearDown() {
-		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-
 		PL.deleteFromS3(amazonS3Client, bucketName);
 		US.deleteFromS3(amazonS3Client, bucketName);
 		CZ.deleteFromS3(amazonS3Client, bucketName);
 		UK.deleteFromS3(amazonS3Client, bucketName);
+
+//		fakeS3.close();
 	}
 
-	@Test(enabled = false)
+	@Test(enabled = true)
 	public void shouldListObjectsInBucket() throws IOException {
 		// Given
-		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
 
 		// When
 		Observable<ObjectListing> listing = client.listObjects(bucketName);
@@ -102,11 +109,10 @@ public class AsyncS3ClientTest {
 				.isEqualTo(amazonListing);
 	}
 
-	@Test(enabled = false)
+	@Test(enabled = true)
 	public void shouldListObjects() throws IOException {
 		// Given
-		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
+
 
 		// When
 		Observable<ObjectListing> listing = client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/");
@@ -118,7 +124,7 @@ public class AsyncS3ClientTest {
 				.isEqualTo(amazonListing);
 	}
 
-	@Test(enabled = false)
+	@Test(enabled = true)
 	public void shouldListObjectsWhenUsingRequest() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
@@ -138,7 +144,7 @@ public class AsyncS3ClientTest {
 				.isEqualTo(amazonListing);
 	}
 
-	@Test(enabled = false)
+	@Test(enabled = true)
 	public void shouldListObjectBatches() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
@@ -166,7 +172,7 @@ public class AsyncS3ClientTest {
 				.isEqualTo(amazonListing).isNotTruncated();
 	}
 
-	@Test(enabled = false)
+	@Test(enabled = true)
 	public void shouldListObjectBatchesWhenStartingWithARequest() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
@@ -191,7 +197,7 @@ public class AsyncS3ClientTest {
 				.isEqualTo(amazonListing).isNotTruncated();
 	}
 
-	@Test(enabled = false)
+	@Test(enabled = true)
 	public void shouldListObjectWithMaxKeysLimit() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
@@ -214,7 +220,7 @@ public class AsyncS3ClientTest {
 				.hasSize(2);
 	}
 
-	@Test(enabled = false)
+	@Test(enabled = true)
 	public void shouldListObjectBatchesWhenUsingRequest() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
@@ -244,7 +250,7 @@ public class AsyncS3ClientTest {
 				.isNotTruncated();
 	}
 
-	@Test(enabled = false)
+	@Test(enabled = true)
 	public void shouldReturnEmptyListingWhenNotTruncated() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
@@ -270,7 +276,7 @@ public class AsyncS3ClientTest {
 		assertThat(listing).isEqualTo(amazonListing).isNotNull();
 	}
 
-	@Test(enabled = false)
+	@Test(enabled = true)
 	public void shouldListCommonPrefixes() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
@@ -292,7 +298,7 @@ public class AsyncS3ClientTest {
 				.isNotTruncated();
 	}
 
-	@Test(enabled = false)
+	@Test(enabled = true)
 	public void shouldPutObject() throws IOException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
@@ -318,12 +324,9 @@ public class AsyncS3ClientTest {
 		assertThat(actual).isEqualTo(data);
 	}
 
-	@Test(enabled = false)
+	@Test(enabled = true)
 	public void shouldGetObject() throws IOException {
 		// Given
-		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
-
 		String objectName = RandomStringUtils.randomAlphanumeric(55);
 		byte[] data = RandomStringUtils.randomAlphanumeric(10 * 1024).getBytes();
 
@@ -343,7 +346,7 @@ public class AsyncS3ClientTest {
 		assertThat(actual).isEqualTo(data);
 	}
 
-	@Test(enabled = false)
+	@Test(enabled = true)
 	public void shouldDeleteObject() throws IOException, ExecutionException, InterruptedException {
 		// Given
 		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
