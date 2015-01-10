@@ -2,49 +2,52 @@ package pl.codewise.amazon.client;
 
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
-import com.google.common.base.Joiner;
-import com.google.common.collect.Maps;
-
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.util.Map;
+import javolution.text.TextBuilder;
+import pl.codewise.amazon.client.utils.UTF8UrlEncoder;
 
 public class RestUtils {
 
-	public static String createQueryString(ListObjectsRequest listObjectsRequest) {
-		return createQueryString(listObjectsRequest.getPrefix(), listObjectsRequest.getMarker(), listObjectsRequest.getDelimiter(), listObjectsRequest.getMaxKeys());
+	public static TextBuilder appendQueryString(TextBuilder result, ListObjectsRequest listObjectsRequest) {
+		return appendQueryString(result, listObjectsRequest.getPrefix(), listObjectsRequest.getMarker(), listObjectsRequest.getDelimiter(), listObjectsRequest.getMaxKeys());
 	}
 
-	public static String createQueryString(ObjectListing objectListing) {
-		return createQueryString(objectListing.getPrefix(), objectListing.getMarker(), objectListing.getDelimiter(), objectListing.getMaxKeys());
+	public static TextBuilder appendQueryString(TextBuilder result, ObjectListing objectListing) {
+		return appendQueryString(result, objectListing.getPrefix(), objectListing.getMarker(), objectListing.getDelimiter(), objectListing.getMaxKeys());
 	}
 
-	public static String createQueryString(String prefix, String marker, String delimiter, Integer maxKeys) {
-		Map<String, String> result = Maps.newLinkedHashMap();
+	public static TextBuilder appendQueryString(TextBuilder result, String prefix, String marker, String delimiter, Integer maxKeys) {
 		if (prefix != null) {
-			result.put("prefix", escape(prefix));
+			result.append("prefix=");
+			UTF8UrlEncoder.appendEncoded(result, prefix, 0);
 		}
 
 		if (marker != null) {
-			result.put("marker", escape(marker));
+			if (result.length() > 0) {
+				result.append("&");
+			}
+
+			result.append("marker=");
+			UTF8UrlEncoder.appendEncoded(result, marker, 0);
 		}
 
 		if (delimiter != null) {
-			result.put("delimiter", escape(delimiter));
+			if (result.length() > 0) {
+				result.append("&");
+			}
+
+			result.append("delimiter=");
+			UTF8UrlEncoder.appendEncoded(result, delimiter, 0);
 		}
 
 		if (maxKeys != null) {
-			result.put("max-keys", maxKeys.toString());
+			if (result.length() > 0) {
+				result.append("&");
+			}
+
+			result.append("max-keys=");
+			UTF8UrlEncoder.appendEncoded(result, maxKeys.toString(), 0);
 		}
 
-		return Joiner.on("&").withKeyValueSeparator("=").join(result);
-	}
-
-	public static String escape(String prefix) {
-		try {
-			return URLEncoder.encode(prefix, "UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			throw new RuntimeException(e);
-		}
+		return result;
 	}
 }

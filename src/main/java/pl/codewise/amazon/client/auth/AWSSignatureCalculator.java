@@ -11,7 +11,6 @@ import org.apache.commons.lang3.time.FastDateFormat;
 import org.bouncycastle.crypto.digests.SHA1Digest;
 import org.bouncycastle.crypto.macs.HMac;
 import org.bouncycastle.crypto.params.KeyParameter;
-import pl.codewise.amazon.client.AsyncS3Client;
 
 import java.util.Arrays;
 import java.util.List;
@@ -24,6 +23,8 @@ public class AWSSignatureCalculator implements SignatureCalculator {
 	public final static String HEADER_AUTHORIZATION = "Authorization";
 	public final static String HEADER_DATE = "Date";
 
+	private final String s3Location;
+
 	private final String accessKey;
 	private final KeyParameter keyParameter;
 
@@ -33,15 +34,16 @@ public class AWSSignatureCalculator implements SignatureCalculator {
 
 	private final Operation operation;
 
-	public AWSSignatureCalculator(String accessKey, String secretKey, Operation operation) {
+	public AWSSignatureCalculator(String accessKey, String secretKey, Operation operation, String s3Location) {
 		this.accessKey = accessKey;
+		this.s3Location = s3Location;
 		this.keyParameter = new KeyParameter(secretKey.getBytes());
 
 		this.operation = operation;
 	}
 
-	public AWSSignatureCalculator(AWSCredentials credentials, Operation operation) {
-		this(credentials.getAWSAccessKeyId(), credentials.getAWSSecretKey(), operation);
+	public AWSSignatureCalculator(AWSCredentials credentials, Operation operation, String s3Location) {
+		this(credentials.getAWSAccessKeyId(), credentials.getAWSSecretKey(), operation, s3Location);
 	}
 
 	@SuppressWarnings("StringBufferReplaceableByString")
@@ -83,7 +85,7 @@ public class AWSSignatureCalculator implements SignatureCalculator {
 				.append('/');
 
 		String virtualHost = request.getVirtualHost();
-		stringToSignBuilder.append(virtualHost, 0, virtualHost.length() - AsyncS3Client.S3_LOCATION.length() - 1);
+		stringToSignBuilder.append(virtualHost, 0, virtualHost.length() - s3Location.length() - 1);
 		operation.getResourceName(stringToSignBuilder, request);
 
 		String authorization = calculateRFC2104HMAC(stringToSignBuilder.toString(), keyParameter);

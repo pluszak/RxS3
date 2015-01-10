@@ -5,11 +5,13 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.Request;
+import javolution.text.TextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 import pl.codewise.amazon.client.auth.AWSSignatureCalculatorFactory;
+import pl.codewise.amazon.client.utils.UTF8UrlEncoder;
 import pl.codewise.amazon.client.xml.*;
 import rx.Observable;
 import rx.Subscriber;
@@ -17,16 +19,15 @@ import rx.Subscriber;
 import java.io.Closeable;
 import java.io.IOException;
 
-import static pl.codewise.amazon.client.RestUtils.createQueryString;
-import static pl.codewise.amazon.client.RestUtils.escape;
+import static pl.codewise.amazon.client.RestUtils.appendQueryString;
 
 @SuppressWarnings("UnusedDeclaration")
 public class AsyncS3Client implements Closeable {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(AsyncS3Client.class);
 
-	public static final String S3_LOCATION = "s3.amazonaws.com";
-	private static final String S3_URL = "http://" + S3_LOCATION;
+	private final String s3Location;
+	private final String s3Url;
 
 	private final AsyncHttpClient httpClient;
 
@@ -37,6 +38,9 @@ public class AsyncS3Client implements Closeable {
 
 	public AsyncS3Client(ClientConfiguration configuration, AsyncHttpClient httpClient) {
 		this.httpClient = httpClient;
+
+		s3Location = configuration.getS3Location();
+		s3Url = "http://" + s3Location;
 
 		try {
 			XmlPullParserFactory pullParserFactory = XmlPullParserFactory.newInstance();
@@ -51,7 +55,7 @@ public class AsyncS3Client implements Closeable {
 		signatureCalculators = new ThreadLocal<AWSSignatureCalculatorFactory>() {
 			@Override
 			protected AWSSignatureCalculatorFactory initialValue() {
-				return new AWSSignatureCalculatorFactory(configuration.getCredentials());
+				return new AWSSignatureCalculatorFactory(configuration.getCredentials(), s3Location);
 			}
 		};
 	}
@@ -63,7 +67,7 @@ public class AsyncS3Client implements Closeable {
 	public Observable<byte[]> putObject(String bucketName, String key, byte[] data, ObjectMetadata metadata) throws IOException {
 		String virtualHost = getVirtualHost(bucketName);
 
-		Request request = httpClient.preparePut(S3_URL + "/" + key)
+		Request request = httpClient.preparePut(s3Url + "/" + key)
 				.setVirtualHost(virtualHost)
 				.setSignatureCalculator(signatureCalculators.get().getPutSignatureCalculator())
 				.setBody(data)
@@ -84,10 +88,12 @@ public class AsyncS3Client implements Closeable {
 	}
 
 	public void listObjects(String bucketName, String prefix, Subscriber<? super ObjectListing> subscriber) {
-		String virtualHost = getVirtualHost(bucketName);
-		String queryString = createQueryString(prefix, null, null, null);
+		TextBuilder urlBuilder = new TextBuilder();
+		urlBuilder.append(s3Url).append("/?");
+		appendQueryString(urlBuilder, prefix, null, null, null);
 
-		Request request = httpClient.prepareGet(S3_URL + "/?" + queryString)
+		String virtualHost = getVirtualHost(bucketName);
+		Request request = httpClient.prepareGet(urlBuilder.toString())
 				.setVirtualHost(virtualHost)
 				.setSignatureCalculator(signatureCalculators.get().getListSignatureCalculator())
 				.build();
@@ -96,10 +102,12 @@ public class AsyncS3Client implements Closeable {
 	}
 
 	public Observable<ObjectListing> listObjects(String bucketName, String prefix) {
-		String virtualHost = getVirtualHost(bucketName);
-		String queryString = createQueryString(prefix, null, null, null);
+		TextBuilder urlBuilder = new TextBuilder();
+		urlBuilder.append(s3Url).append("/?");
+		appendQueryString(urlBuilder, prefix, null, null, null);
 
-		Request request = httpClient.prepareGet(S3_URL + "/?" + queryString)
+		String virtualHost = getVirtualHost(bucketName);
+		Request request = httpClient.prepareGet(urlBuilder.toString())
 				.setVirtualHost(virtualHost)
 				.setSignatureCalculator(signatureCalculators.get().getListSignatureCalculator())
 				.build();
@@ -151,10 +159,12 @@ public class AsyncS3Client implements Closeable {
 	}
 
 	public void listObjects(ListObjectsRequest listObjectsRequest, Subscriber<ObjectListing> observer) {
-		String virtualHost = getVirtualHost(listObjectsRequest.getBucketName());
-		String queryString = createQueryString(listObjectsRequest);
+		TextBuilder urlBuilder = new TextBuilder();
+		urlBuilder.append(s3Url).append("/?");
+		appendQueryString(urlBuilder, listObjectsRequest);
 
-		Request request = httpClient.prepareGet(S3_URL + "/?" + queryString)
+		String virtualHost = getVirtualHost(listObjectsRequest.getBucketName());
+		Request request = httpClient.prepareGet(urlBuilder.toString())
 				.setVirtualHost(virtualHost)
 				.setSignatureCalculator(signatureCalculators.get().getListSignatureCalculator())
 				.build();
@@ -163,10 +173,12 @@ public class AsyncS3Client implements Closeable {
 	}
 
 	public Observable<ObjectListing> listObjects(ListObjectsRequest listObjectsRequest) {
-		String virtualHost = getVirtualHost(listObjectsRequest.getBucketName());
-		String queryString = createQueryString(listObjectsRequest);
+		TextBuilder urlBuilder = new TextBuilder();
+		urlBuilder.append(s3Url).append("/?");
+		appendQueryString(urlBuilder, listObjectsRequest);
 
-		Request request = httpClient.prepareGet(S3_URL + "/?" + queryString)
+		String virtualHost = getVirtualHost(listObjectsRequest.getBucketName());
+		Request request = httpClient.prepareGet(urlBuilder.toString())
 				.setVirtualHost(virtualHost)
 				.setSignatureCalculator(signatureCalculators.get().getListSignatureCalculator())
 				.build();
@@ -175,10 +187,12 @@ public class AsyncS3Client implements Closeable {
 	}
 
 	public Observable<byte[]> getObject(String bucketName, String location) throws IOException {
-		String virtualHost = getVirtualHost(bucketName);
-		String url = S3_URL + "/" + escape(location);
+		TextBuilder urlBuilder = new TextBuilder();
+		urlBuilder.append(s3Url).append("/");
+		UTF8UrlEncoder.appendEncoded(urlBuilder, location);
 
-		Request request = httpClient.prepareGet(url)
+		String virtualHost = getVirtualHost(bucketName);
+		Request request = httpClient.prepareGet(urlBuilder.toString())
 				.setVirtualHost(virtualHost)
 				.setSignatureCalculator(signatureCalculators.get().getGetSignatureCalculator())
 				.build();
@@ -187,10 +201,12 @@ public class AsyncS3Client implements Closeable {
 	}
 
 	public Observable<?> deleteObject(String bucketName, String location) throws IOException {
-		String virtualHost = getVirtualHost(bucketName);
-		String url = S3_URL + "/" + escape(location);
+		TextBuilder urlBuilder = new TextBuilder();
+		urlBuilder.append(s3Url).append("/");
+		UTF8UrlEncoder.appendEncoded(urlBuilder, location);
 
-		Request request = httpClient.prepareDelete(url)
+		String virtualHost = getVirtualHost(bucketName);
+		Request request = httpClient.prepareDelete(urlBuilder.toString())
 				.setVirtualHost(virtualHost)
 				.setSignatureCalculator(signatureCalculators.get().getDeleteSignatureCalculator())
 				.build();
@@ -204,7 +220,7 @@ public class AsyncS3Client implements Closeable {
 	}
 
 	private String getVirtualHost(String bucketName) {
-		return bucketName + "." + S3_LOCATION;
+		return bucketName + "." + s3Location;
 	}
 
 	private <T> void retrieveResult(final Request request, final GenericResponseParser<T> responseParser, Subscriber<? super T> observer) {
