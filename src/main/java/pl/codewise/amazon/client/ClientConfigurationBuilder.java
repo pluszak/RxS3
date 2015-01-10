@@ -5,6 +5,7 @@ import com.amazonaws.auth.AWSCredentials;
 public class ClientConfigurationBuilder {
 
 	private AWSCredentials credentials;
+	private String s3Location;
 
 	private boolean skipParsingOwner;
 	private boolean skipParsingETag;
@@ -13,6 +14,11 @@ public class ClientConfigurationBuilder {
 
 	public ClientConfigurationBuilder useCredentials(AWSCredentials credentials) {
 		this.credentials = credentials;
+		return this;
+	}
+
+	public ClientConfigurationBuilder connectTo(String s3Location) {
+		this.s3Location = s3Location;
 		return this;
 	}
 
@@ -37,6 +43,6 @@ public class ClientConfigurationBuilder {
 	}
 
 	public ClientConfiguration build() {
-		return new ClientConfiguration(credentials, skipParsingOwner, skipParsingETag, skipParsingLastModified, skipParsingStorageClass);
+		return new ClientConfiguration(credentials, s3Location, skipParsingOwner, skipParsingETag, skipParsingLastModified, skipParsingStorageClass);
 	}
 }
