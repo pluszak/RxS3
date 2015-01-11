@@ -2,8 +2,8 @@ machine:
   java:
     version: oraclejdk8
   post:
-    - ./fake-s3/bin/fakes3 -r /mnt/fakes3 -p 12345
-      background: true
+    - ./fake-s3/bin/fakes3 -r /mnt/fakes3 -p 12345:
+        background: true
 
 
 deployment:
