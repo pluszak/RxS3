@@ -6,12 +6,14 @@ import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.googlecode.catchexception.CatchException;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.slf4j.Logger;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -25,14 +27,18 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
+import static org.slf4j.LoggerFactory.getLogger;
 import static pl.codewise.amazon.client.AsyncS3ClientAssertions.assertThat;
 
 public class AsyncS3ClientTest {
+
+	private static final Logger LOGGER = getLogger(AsyncS3ClientTest.class);
 
 	public static final String ACCESS_KEY_PROPERTY_NAME = "s3.accessKey";
 	public static final String SECRET_KEY_PROPERTY_NAME = "s3.secretKey";
 
 	public static final String BUCKET_NAME_PROPERTY_NAME = "s3.bucketName";
+	public static final String DEFAULT_BUCKET_NAME = "async-client-test";
 
 	private String bucketName;
 	protected BasicAWSCredentials credentials;
@@ -45,25 +51,40 @@ public class AsyncS3ClientTest {
 	protected ClientConfiguration configuration;
 
 	protected List<String> fieldsToIgnore = Lists.newArrayList();
+
 	private FakeS3 fakeS3;
 	private AmazonS3Client amazonS3Client;
 	private AsyncS3Client client;
 
 	@BeforeClass
 	public void setUpCredentialsAndBucketName() {
-//		fakeS3 = new FakeS3();
-		String accessKey = System.getProperty(ACCESS_KEY_PROPERTY_NAME);
-		assertThat(accessKey).isNotNull();
+		String accessKey = System.getProperty(ACCESS_KEY_PROPERTY_NAME, "");
+		String secretKey = System.getProperty(SECRET_KEY_PROPERTY_NAME, "");
 
-		String secretKey = System.getProperty(SECRET_KEY_PROPERTY_NAME);
-		assertThat(secretKey).isNotNull();
-
-		bucketName = System.getProperty(BUCKET_NAME_PROPERTY_NAME);
-		assertThat(bucketName).isNotNull();
 		credentials = new BasicAWSCredentials(accessKey, secretKey);
-
 		amazonS3Client = new AmazonS3Client(credentials);
-		amazonS3Client.setEndpoint("http://127.0.0.1:12345");// + fakeS3.getLocalPort());
+
+		if (Strings.isNullOrEmpty(accessKey) || Strings.isNullOrEmpty(secretKey)) {
+			fakeS3 = new FakeS3();
+			LOGGER.info("No amazon configuration was found. Using fake S3");
+
+			amazonS3Client.setEndpoint("http://localhost:" + fakeS3.getLocalPort());
+			configuration = ClientConfiguration
+					.builder()
+					.connectTo("localhost:" + fakeS3.getLocalPort())
+					.useCredentials(credentials)
+					.build();
+		} else {
+			configuration = ClientConfiguration
+					.builder()
+					.useCredentials(credentials)
+					.build();
+
+			LOGGER.info("Found amazon configuration. Using real S3");
+		}
+
+		client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
+		bucketName = System.getProperty(BUCKET_NAME_PROPERTY_NAME, DEFAULT_BUCKET_NAME);
 	}
 
 	@BeforeClass(dependsOnMethods = "setUpCredentialsAndBucketName")
@@ -74,17 +95,6 @@ public class AsyncS3ClientTest {
 		UK.putToS3(amazonS3Client, bucketName);
 	}
 
-	@BeforeClass(dependsOnMethods = "setUpS3Contents")
-	public void setUpConfigurationThatDoesNotSkipTags() throws IOException {
-		configuration = ClientConfiguration
-				.builder()
-				.connectTo("localhost:12345")// + fakeS3.getLocalPort())
-				.useCredentials(credentials)
-				.build();
-
-		client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
-	}
-
 	@AfterClass
 	public void tearDown() {
 		PL.deleteFromS3(amazonS3Client, bucketName);
@@ -92,13 +102,11 @@ public class AsyncS3ClientTest {
 		CZ.deleteFromS3(amazonS3Client, bucketName);
 		UK.deleteFromS3(amazonS3Client, bucketName);
 
-//		fakeS3.close();
+		IOUtils.closeQuietly(fakeS3);
 	}
 
 	@Test(enabled = true)
 	public void shouldListObjectsInBucket() throws IOException {
-		// Given
-
 		// When
 		Observable<ObjectListing> listing = client.listObjects(bucketName);
 		ObjectListing amazonListing = amazonS3Client.listObjects(bucketName);
@@ -111,9 +119,6 @@ public class AsyncS3ClientTest {
 
 	@Test(enabled = true)
 	public void shouldListObjects() throws IOException {
-		// Given
-
-
 		// When
 		Observable<ObjectListing> listing = client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/");
 		ObjectListing amazonListing = amazonS3Client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/");
@@ -127,9 +132,6 @@ public class AsyncS3ClientTest {
 	@Test(enabled = true)
 	public void shouldListObjectsWhenUsingRequest() throws IOException {
 		// Given
-		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
-
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
 		request.setPrefix("COUNTRY_BY_DATE/2014/05/");
@@ -146,10 +148,6 @@ public class AsyncS3ClientTest {
 
 	@Test(enabled = true)
 	public void shouldListObjectBatches() throws IOException {
-		// Given
-		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
-
 		// When & Then
 		PublishSubject<ObjectListing> inProgressSubject = PublishSubject.create();
 		PublishSubject<ObjectListing> completedSubject = PublishSubject.create();
@@ -175,9 +173,6 @@ public class AsyncS3ClientTest {
 	@Test(enabled = true)
 	public void shouldListObjectBatchesWhenStartingWithARequest() throws IOException {
 		// Given
-		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
-
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
 		request.setPrefix("COUNTRY_BY_DATE/2014/06/");
@@ -200,9 +195,6 @@ public class AsyncS3ClientTest {
 	@Test(enabled = true)
 	public void shouldListObjectWithMaxKeysLimit() throws IOException {
 		// Given
-		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
-
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
 		request.setPrefix("COUNTRY_BY_DATE/2014/");
@@ -223,9 +215,6 @@ public class AsyncS3ClientTest {
 	@Test(enabled = true)
 	public void shouldListObjectBatchesWhenUsingRequest() throws IOException {
 		// Given
-		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
-
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
 		request.setMaxKeys(2);
@@ -253,9 +242,6 @@ public class AsyncS3ClientTest {
 	@Test(enabled = true)
 	public void shouldReturnEmptyListingWhenNotTruncated() throws IOException {
 		// Given
-		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
-
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
 		request.setPrefix("COUNTRY_BY_DATE/2014/");
@@ -279,9 +265,6 @@ public class AsyncS3ClientTest {
 	@Test(enabled = true)
 	public void shouldListCommonPrefixes() throws IOException {
 		// Given
-		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
-
 		ListObjectsRequest request = new ListObjectsRequest();
 		request.setBucketName(bucketName);
 		request.setPrefix("COUNTRY_BY_DATE/2014/05/");
@@ -301,9 +284,6 @@ public class AsyncS3ClientTest {
 	@Test(enabled = true)
 	public void shouldPutObject() throws IOException {
 		// Given
-		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
-
 		String objectName = RandomStringUtils.randomAlphanumeric(55);
 		byte[] data = RandomStringUtils.randomAlphanumeric(10 * 1024).getBytes();
 
@@ -349,9 +329,6 @@ public class AsyncS3ClientTest {
 	@Test(enabled = true)
 	public void shouldDeleteObject() throws IOException, ExecutionException, InterruptedException {
 		// Given
-		AmazonS3Client amazonS3Client = new AmazonS3Client(credentials);
-		AsyncS3Client client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
-
 		String objectName = RandomStringUtils.randomAlphanumeric(55);
 		byte[] data = RandomStringUtils.randomAlphanumeric(10 * 1024).getBytes();
 
@@ -369,7 +346,7 @@ public class AsyncS3ClientTest {
 
 		// Then
 		CatchException.catchException(amazonS3Client).getObject(bucketName, objectName);
-		assertThat(CatchException.<Exception>caughtException()).hasMessageContaining("The specified key does not exist.");
+		assertThat(CatchException.<Exception>caughtException()).hasMessageContaining("The specified key does not exist");
 	}
 
 	private String getBase64EncodedMD5Hash(byte[] packet) {
