@@ -6,13 +6,13 @@ import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
-import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.googlecode.catchexception.CatchException;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -24,6 +24,8 @@ import rx.subjects.PublishSubject;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
 import java.util.concurrent.ExecutionException;
 
 import static org.slf4j.LoggerFactory.getLogger;
@@ -35,6 +37,7 @@ public class AsyncS3ClientTest {
 
 	public static final String ACCESS_KEY_PROPERTY_NAME = "s3.accessKey";
 	public static final String SECRET_KEY_PROPERTY_NAME = "s3.secretKey";
+	public static final String EMPTY_CREDENTIAL = "empty";
 
 	public static final String BUCKET_NAME_PROPERTY_NAME = "s3.bucketName";
 	public static final String DEFAULT_BUCKET_NAME = "async-client-test";
@@ -55,14 +58,21 @@ public class AsyncS3ClientTest {
 	private AsyncS3Client client;
 
 	@BeforeClass
+	public void setLocales() {
+		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+		DateTimeZone.setDefault(DateTimeZone.UTC);
+		Locale.setDefault(Locale.US);
+	}
+
+	@BeforeClass(dependsOnMethods = "setLocales")
 	public void setUpCredentialsAndBucketName() {
-		String accessKey = System.getProperty(ACCESS_KEY_PROPERTY_NAME, "");
-		String secretKey = System.getProperty(SECRET_KEY_PROPERTY_NAME, "");
+		String accessKey = System.getProperty(ACCESS_KEY_PROPERTY_NAME, EMPTY_CREDENTIAL);
+		String secretKey = System.getProperty(SECRET_KEY_PROPERTY_NAME, EMPTY_CREDENTIAL);
 
 		credentials = new BasicAWSCredentials(accessKey, secretKey);
 		amazonS3Client = new AmazonS3Client(credentials);
 
-		if (Strings.isNullOrEmpty(accessKey) || Strings.isNullOrEmpty(secretKey)) {
+		if (EMPTY_CREDENTIAL.equals(accessKey) || EMPTY_CREDENTIAL.equals(secretKey)) {
 			LOGGER.info("No amazon configuration was found. Assuming fake S3 listens on port 12345");
 
 			amazonS3Client.setEndpoint("http://localhost:12345");
