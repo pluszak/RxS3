@@ -21,7 +21,7 @@ public class FakeS3 implements Closeable {
 		}
 
 		try {
-			fakeS3Process = new ProcessBuilder().command("fakes3", "-r", "/mnt/fakes3", "-p", Integer.toString(localPort)).start();
+			fakeS3Process = new ProcessBuilder().command("fake-s3/bin/fakes3", "-r", "/mnt/fakes3", "-p", Integer.toString(localPort)).start();
 		} catch (IOException e) {
 			Assertions.fail("Error while starting fakeS3 process", e);
 		}
