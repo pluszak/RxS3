@@ -4,7 +4,7 @@ machine:
 
 dependencies:
   post:
-    - fakes3 -r /mnt/fakes3 -p 12345:
+    - ./fakes3 -r /mnt/fakes3 -p 12345:
         pwd:
           fake-s3/bin/
         background: true
