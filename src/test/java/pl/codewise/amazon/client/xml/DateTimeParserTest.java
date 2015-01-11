@@ -2,7 +2,7 @@ package pl.codewise.amazon.client.xml;
 
 import javolution.text.CharArray;
 import javolution.text.Cursor;
-import org.junit.Test;
+import org.testng.annotations.Test;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -43,7 +43,7 @@ public class DateTimeParserTest {
 		assertThat(actual).isEqualTo(expected);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expectedExceptions = IllegalArgumentException.class)
 	public void shouldComplainOnInvalidYear() {
 		// Given
 		DateTimeParser parser = new DateTimeParser();
@@ -56,7 +56,7 @@ public class DateTimeParserTest {
 		parser.parse(charArray, new Cursor(), Calendar.getInstance());
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expectedExceptions = IllegalArgumentException.class)
 	public void shouldComplainOnInvalidYearMonthSeparator() {
 		// Given
 		DateTimeParser parser = new DateTimeParser();
@@ -69,7 +69,7 @@ public class DateTimeParserTest {
 		parser.parse(charArray, new Cursor(), Calendar.getInstance());
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expectedExceptions = IllegalArgumentException.class)
 	public void shouldComplainOnInvalidMonthDaysSeparator() {
 		// Given
 		DateTimeParser parser = new DateTimeParser();

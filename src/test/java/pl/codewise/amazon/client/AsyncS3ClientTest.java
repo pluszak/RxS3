@@ -6,18 +6,17 @@ import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.googlecode.catchexception.CatchException;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.joda.time.DateTimeZone;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
 import org.slf4j.Logger;
-import pl.codewise.amazon.fakes3.FakeS3;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Test;
 import rx.Observable;
 import rx.Subscriber;
 import rx.subjects.PublishSubject;
@@ -25,8 +24,6 @@ import rx.subjects.PublishSubject;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
-import java.util.Locale;
-import java.util.TimeZone;
 import java.util.concurrent.ExecutionException;
 
 import static org.slf4j.LoggerFactory.getLogger;
@@ -38,47 +35,40 @@ public class AsyncS3ClientTest {
 
 	public static final String ACCESS_KEY_PROPERTY_NAME = "s3.accessKey";
 	public static final String SECRET_KEY_PROPERTY_NAME = "s3.secretKey";
-	public static final String EMPTY_CREDENTIAL = "empty";
 
 	public static final String BUCKET_NAME_PROPERTY_NAME = "s3.bucketName";
 	public static final String DEFAULT_BUCKET_NAME = "async-client-test";
 
-	private static String bucketName;
-	protected static BasicAWSCredentials credentials;
+	private String bucketName;
+	protected BasicAWSCredentials credentials;
 
-	private static TestS3Object PL = TestS3Object.withNameAndRandomMetadata("COUNTRY_BY_DATE/2014/05/PL", 2);
-	private static TestS3Object US = TestS3Object.withNameAndRandomMetadata("COUNTRY_BY_DATE/2014/05/US", 3);
-	private static TestS3Object CZ = TestS3Object.withNameAndRandomMetadata("COUNTRY_BY_DATE/2014/06/CZ", 0);
-	private static TestS3Object UK = TestS3Object.withNameAndRandomMetadata("COUNTRY_BY_DATE/2014/07/UK", 1);
+	private TestS3Object PL = TestS3Object.withNameAndRandomMetadata("COUNTRY_BY_DATE/2014/05/PL", 2);
+	private TestS3Object US = TestS3Object.withNameAndRandomMetadata("COUNTRY_BY_DATE/2014/05/US", 3);
+	private TestS3Object CZ = TestS3Object.withNameAndRandomMetadata("COUNTRY_BY_DATE/2014/06/CZ", 0);
+	private TestS3Object UK = TestS3Object.withNameAndRandomMetadata("COUNTRY_BY_DATE/2014/07/UK", 1);
 
-	protected static ClientConfiguration configuration;
+	protected ClientConfiguration configuration;
 
-	protected static List<String> fieldsToIgnore = Lists.newArrayList();
+	protected List<String> fieldsToIgnore = Lists.newArrayList();
 
-	private static FakeS3 fakeS3;
-	private static AmazonS3Client amazonS3Client;
-	private static AsyncS3Client client;
+	private AmazonS3Client amazonS3Client;
+	private AsyncS3Client client;
 
 	@BeforeClass
-	public static void setUpCredentialsAndBucketName() {
-		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
-		DateTimeZone.setDefault(DateTimeZone.UTC);
-		Locale.setDefault(Locale.US);
-
-		String accessKey = System.getProperty(ACCESS_KEY_PROPERTY_NAME, EMPTY_CREDENTIAL);
-		String secretKey = System.getProperty(SECRET_KEY_PROPERTY_NAME, EMPTY_CREDENTIAL);
+	public void setUpCredentialsAndBucketName() {
+		String accessKey = System.getProperty(ACCESS_KEY_PROPERTY_NAME, "");
+		String secretKey = System.getProperty(SECRET_KEY_PROPERTY_NAME, "");
 
 		credentials = new BasicAWSCredentials(accessKey, secretKey);
 		amazonS3Client = new AmazonS3Client(credentials);
 
-		if (EMPTY_CREDENTIAL.equals(accessKey) || EMPTY_CREDENTIAL.equals(secretKey)) {
-			fakeS3 = new FakeS3();
-			LOGGER.info("No amazon configuration was found. Using fake S3");
+		if (Strings.isNullOrEmpty(accessKey) || Strings.isNullOrEmpty(secretKey)) {
+			LOGGER.info("No amazon configuration was found. Assuming fake S3 listens on port 12345");
 
-			amazonS3Client.setEndpoint("http://localhost:" + fakeS3.getLocalPort());
+			amazonS3Client.setEndpoint("http://localhost:12345");
 			configuration = ClientConfiguration
 					.builder()
-					.connectTo("localhost:" + fakeS3.getLocalPort())
+					.connectTo("localhost:12345")
 					.useCredentials(credentials)
 					.build();
 		} else {
@@ -94,8 +84,8 @@ public class AsyncS3ClientTest {
 		bucketName = System.getProperty(BUCKET_NAME_PROPERTY_NAME, DEFAULT_BUCKET_NAME);
 	}
 
-	@BeforeClass
-	public static void setUpS3Contents() throws IOException {
+	@BeforeClass(dependsOnMethods = "setUpCredentialsAndBucketName")
+	public void setUpS3Contents() throws IOException {
 		PL.putToS3(amazonS3Client, bucketName);
 		US.putToS3(amazonS3Client, bucketName);
 		CZ.putToS3(amazonS3Client, bucketName);
@@ -103,13 +93,11 @@ public class AsyncS3ClientTest {
 	}
 
 	@AfterClass
-	public static void tearDown() {
+	public void tearDown() {
 		PL.deleteFromS3(amazonS3Client, bucketName);
 		US.deleteFromS3(amazonS3Client, bucketName);
 		CZ.deleteFromS3(amazonS3Client, bucketName);
 		UK.deleteFromS3(amazonS3Client, bucketName);
-
-		IOUtils.closeQuietly(fakeS3);
 	}
 
 	@Test

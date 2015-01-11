@@ -1,6 +1,6 @@
 package pl.codewise.amazon.client;
 
-import org.junit.BeforeClass;
+import org.testng.annotations.BeforeClass;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -8,7 +8,7 @@ import java.util.Arrays;
 public class AsyncS3ClientTestThatSkipsTags extends AsyncS3ClientTest {
 
 	@BeforeClass
-	public static void setUpConfigurationThatDoesNotSkipTags() throws IOException {
+	public void setUpConfigurationThatDoesNotSkipTags() throws IOException {
 		fieldsToIgnore.addAll(Arrays.asList("lastModified", "storageClass", "owner"));
 
 		configuration = ClientConfiguration
