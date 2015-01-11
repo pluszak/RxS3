@@ -4,8 +4,10 @@ import com.amazonaws.auth.AWSCredentials;
 
 public class ClientConfigurationBuilder {
 
+	public static final String DEFAULT_S3_LOCATION = "s3.amazonaws.com";
+
+	private String s3Location = DEFAULT_S3_LOCATION;
 	private AWSCredentials credentials;
-	private String s3Location;
 
 	private boolean skipParsingOwner;
 	private boolean skipParsingETag;
