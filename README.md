@@ -1,6 +1,6 @@
 RxS3
 ========
-[![Build Status](https://travis-ci.org/tkowalcz/RxS3.svg?branch=master)](https://travis-ci.org/tkowalcz/RxS3.svg?branch=master)
+[![Build Status](https://circleci.com/gh/tkowalcz/RxS3.svg?style=shield)](https://circleci.com/gh/tkowalcz/RxS3.svg?style=shield)
 
 RxS3 is a lightweight, asynchronous AmazonS3 client.
 
