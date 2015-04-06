@@ -2,6 +2,10 @@ machine:
   java:
     version: oraclejdk8
 
+checkout:
+  post:
+    - chmod u+x gradlew
+
 dependencies:
   post:
     - ./bin/fakes3 -r . -p 12345:
