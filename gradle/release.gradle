@@ -13,42 +13,42 @@ bintrayUpload {
 
 task("release") {
     dependsOn bintrayUpload
-    doLast {
-        if (dryRun) {
-            logger.lifecycle "Dry-running the release"
-        }
-
-        String currentVersion = project.version //the version loaded when Gradle build has started
-        String buildInfo = "by CI build $System.env.CIRCLE_BUILD_NUM [ci skip]"
-
-        String encodedGithubToken = URLEncoder.encode(System.env.GH_TOKEN, "UTF-8")
-        MaskedArg pushTarget = new MaskedArg(value: "https://tkowalcz:${encodedGithubToken}@github.com/tkowalcz/RxS3.git")
-
-        configureGit()
-        createTag(currentVersion, buildInfo)
-
-        /*
-            Now we'll start operating on master. This introduces a problem - someone might have pushed changes *after* release process has started
-            What can happen:
-             - bintrayUpload will fail saying that the version is already released
-             - git push fails saying that the pull is needed
-            Resolutions:
-             - see 'TROUBLESHOOTING' section at the top of this file
-        */
-        run "git", "checkout", "master"
-        run "git", "merge", "rxs3-$currentVersion" as String, "--squash", "--no-commit"
-        commitIncrementedVersion(currentVersion, buildInfo)
-
-        def status = ["git", "status"]
-        run status
-
-        def pushCommandLine = ["git", "push", pushTarget, "master", "rxs3-$currentVersion", "-q"]
-        if (dryRun) {
-            pushCommandLine << '--dry-run'
-        }
-        run pushCommandLine
-        run status
-    }
+//    doLast {
+//        if (dryRun) {
+//            logger.lifecycle "Dry-running the release"
+//        }
+//
+//        String currentVersion = project.version //the version loaded when Gradle build has started
+//        String buildInfo = "by CI build $System.env.CIRCLE_BUILD_NUM [ci skip]"
+//
+//        String encodedGithubToken = URLEncoder.encode(System.env.GH_TOKEN, "UTF-8")
+//        MaskedArg pushTarget = new MaskedArg(value: "https://tkowalcz:${encodedGithubToken}@github.com/tkowalcz/RxS3.git")
+//
+//        configureGit()
+//        createTag(currentVersion, buildInfo)
+//
+//        /*
+//            Now we'll start operating on master. This introduces a problem - someone might have pushed changes *after* release process has started
+//            What can happen:
+//             - bintrayUpload will fail saying that the version is already released
+//             - git push fails saying that the pull is needed
+//            Resolutions:
+//             - see 'TROUBLESHOOTING' section at the top of this file
+//        */
+//        run "git", "checkout", "master"
+//        run "git", "merge", "rxs3-$currentVersion" as String, "--squash", "--no-commit"
+//        commitIncrementedVersion(currentVersion, buildInfo)
+//
+//        def status = ["git", "status"]
+//        run status
+//
+//        def pushCommandLine = ["git", "push", pushTarget, "master", "rxs3-$currentVersion", "-q"]
+//        if (dryRun) {
+//            pushCommandLine << '--dry-run'
+//        }
+//        run pushCommandLine
+//        run status
+//    }
 }
 
 private void createTag(String currentVersion, String buildInfo) {
