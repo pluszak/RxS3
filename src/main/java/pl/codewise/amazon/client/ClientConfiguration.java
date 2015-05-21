@@ -1,51 +1,51 @@
 package pl.codewise.amazon.client;
 
-import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSCredentialsProvider;
 
 public class ClientConfiguration {
 
-	private AWSCredentials credentials;
-	private String s3Location;
+    private AWSCredentialsProvider credentialsProvider;
+    private String s3Location;
 
-	private boolean skipParsingOwner;
-	private boolean skipParsingETag;
-	private boolean skipParsingLastModified;
-	private boolean skipParsingStorageClass;
+    private boolean skipParsingOwner;
+    private boolean skipParsingETag;
+    private boolean skipParsingLastModified;
+    private boolean skipParsingStorageClass;
 
-	public ClientConfiguration(AWSCredentials credentials, String s3Location, boolean skipParsingOwner, boolean skipParsingETag, boolean skipParsingLastModified, boolean skipParsingStorageClass) {
-		this.credentials = credentials;
-		this.s3Location = s3Location;
-		this.skipParsingOwner = skipParsingOwner;
-		this.skipParsingETag = skipParsingETag;
-		this.skipParsingLastModified = skipParsingLastModified;
-		this.skipParsingStorageClass = skipParsingStorageClass;
-	}
+    public ClientConfiguration(AWSCredentialsProvider credentialsProvider, String s3Location, boolean skipParsingOwner, boolean skipParsingETag, boolean skipParsingLastModified, boolean skipParsingStorageClass) {
+        this.credentialsProvider = credentialsProvider;
+        this.s3Location = s3Location;
+        this.skipParsingOwner = skipParsingOwner;
+        this.skipParsingETag = skipParsingETag;
+        this.skipParsingLastModified = skipParsingLastModified;
+        this.skipParsingStorageClass = skipParsingStorageClass;
+    }
 
-	public AWSCredentials getCredentials() {
-		return credentials;
-	}
+    public AWSCredentialsProvider getCredentialsProvider() {
+        return credentialsProvider;
+    }
 
-	public String getS3Location() {
-		return s3Location;
-	}
+    public String getS3Location() {
+        return s3Location;
+    }
 
-	public boolean isSkipParsingOwner() {
-		return skipParsingOwner;
-	}
+    public boolean isSkipParsingOwner() {
+        return skipParsingOwner;
+    }
 
-	public boolean isSkipParsingETag() {
-		return skipParsingETag;
-	}
+    public boolean isSkipParsingETag() {
+        return skipParsingETag;
+    }
 
-	public boolean isSkipParsingLastModified() {
-		return skipParsingLastModified;
-	}
+    public boolean isSkipParsingLastModified() {
+        return skipParsingLastModified;
+    }
 
-	public boolean isSkipParsingStorageClass() {
-		return skipParsingStorageClass;
-	}
+    public boolean isSkipParsingStorageClass() {
+        return skipParsingStorageClass;
+    }
 
-	public static ClientConfigurationBuilder builder() {
-		return new ClientConfigurationBuilder();
-	}
+    public static ClientConfigurationBuilder builder() {
+        return new ClientConfigurationBuilder();
+    }
 }

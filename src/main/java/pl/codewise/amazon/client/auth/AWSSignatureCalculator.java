@@ -1,6 +1,7 @@
 package pl.codewise.amazon.client.auth;
 
 import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.google.common.collect.Iterables;
 import com.ning.http.client.Request;
 import com.ning.http.client.RequestBuilderBase;
@@ -18,92 +19,88 @@ import java.util.Locale;
 
 public class AWSSignatureCalculator implements SignatureCalculator {
 
-	private static final FastDateFormat RFC_822_DATE_FORMAT = FastDateFormat.getInstance("EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
+    private static final FastDateFormat RFC_822_DATE_FORMAT = FastDateFormat.getInstance("EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
 
-	public final static String HEADER_AUTHORIZATION = "Authorization";
-	public final static String HEADER_DATE = "Date";
+    public final static String HEADER_AUTHORIZATION = "Authorization";
+    public final static String HEADER_DATE = "Date";
 
-	private final String s3Location;
+    private final String s3Location;
 
-	private final String accessKey;
-	private final KeyParameter keyParameter;
+    private final AWSCredentialsProvider credentialsProvider;
 
-	private final HMac hmac = new HMac(new SHA1Digest());
-	private final byte[] signingResultHolder = new byte[hmac.getMacSize()];
-	private final TextBuilder stringToSignBuilder = new TextBuilder();
+    private final HMac hmac = new HMac(new SHA1Digest());
+    private final byte[] signingResultHolder = new byte[hmac.getMacSize()];
 
-	private final Operation operation;
+    private final TextBuilder stringToSignBuilder = new TextBuilder();
+    private final Operation operation;
 
-	public AWSSignatureCalculator(String accessKey, String secretKey, Operation operation, String s3Location) {
-		this.accessKey = accessKey;
-		this.s3Location = s3Location;
-		this.keyParameter = new KeyParameter(secretKey.getBytes());
+    public AWSSignatureCalculator(AWSCredentialsProvider credentialsProvider, Operation operation, String s3Location) {
+        this.credentialsProvider = credentialsProvider;
+        this.s3Location = s3Location;
 
-		this.operation = operation;
-	}
+        this.operation = operation;
+    }
 
-	public AWSSignatureCalculator(AWSCredentials credentials, Operation operation, String s3Location) {
-		this(credentials.getAWSAccessKeyId(), credentials.getAWSSecretKey(), operation, s3Location);
-	}
+    @SuppressWarnings("StringBufferReplaceableByString")
+    @Override
+    public void calculateAndAddSignature(Request request, RequestBuilderBase<?> requestBuilder) {
+        try {
+            calculateAndAddSignatureInternal(request, requestBuilder);
+        } finally {
+            stringToSignBuilder.clear();
+            Arrays.fill(signingResultHolder, (byte) 0);
+            hmac.reset();
+        }
+    }
 
-	@SuppressWarnings("StringBufferReplaceableByString")
-	@Override
-	public void calculateAndAddSignature(Request request, RequestBuilderBase<?> requestBuilder) {
-		try {
-			calculateAndAddSignatureInternal(request, requestBuilder);
-		} finally {
-			stringToSignBuilder.clear();
-			Arrays.fill(signingResultHolder, (byte) 0);
-			hmac.reset();
-		}
-	}
+    private void calculateAndAddSignatureInternal(Request request, RequestBuilderBase<?> requestBuilder) {
+        String contentMd5 = "";
+        String contentType = "";
 
-	private void calculateAndAddSignatureInternal(Request request, RequestBuilderBase<?> requestBuilder) {
-		String contentMd5 = "";
-		String contentType = "";
+        List<String> strings = request.getHeaders().get("Content-MD5");
+        if (strings != null && !strings.isEmpty()) {
+            contentMd5 = Iterables.getLast(strings);
+        }
 
-		List<String> strings = request.getHeaders().get("Content-MD5");
-		if (strings != null && !strings.isEmpty()) {
-			contentMd5 = Iterables.getLast(strings);
-		}
+        strings = request.getHeaders().get("Content-Type");
+        if (strings != null && !strings.isEmpty()) {
+            contentType = Iterables.getLast(strings);
+        }
 
-		strings = request.getHeaders().get("Content-Type");
-		if (strings != null && !strings.isEmpty()) {
-			contentType = Iterables.getLast(strings);
-		}
+        String dateString = RFC_822_DATE_FORMAT.format(System.currentTimeMillis());
+        stringToSignBuilder
+                .append(operation.getOperationName())
+                .append('\n')
+                .append(contentMd5)
+                .append('\n')
+                .append(contentType)
+                .append('\n')
+                .append(dateString)
+                .append('\n')
+                .append('/');
 
-		String dateString = RFC_822_DATE_FORMAT.format(System.currentTimeMillis());
-		stringToSignBuilder
-				.append(operation.getOperationName())
-				.append('\n')
-				.append(contentMd5)
-				.append('\n')
-				.append(contentType)
-				.append('\n')
-				.append(dateString)
-				.append('\n')
-				.append('/');
+        String virtualHost = request.getVirtualHost();
+        stringToSignBuilder.append(virtualHost, 0, virtualHost.length() - s3Location.length() - 1);
+        operation.getResourceName(stringToSignBuilder, request);
 
-		String virtualHost = request.getVirtualHost();
-		stringToSignBuilder.append(virtualHost, 0, virtualHost.length() - s3Location.length() - 1);
-		operation.getResourceName(stringToSignBuilder, request);
+        AWSCredentials credentials = credentialsProvider.getCredentials();
+        KeyParameter keyParameter = new KeyParameter(credentials.getAWSSecretKey().getBytes());
+        String authorization = calculateRFC2104HMAC(stringToSignBuilder.toString(), keyParameter);
+        stringToSignBuilder.clear();
 
-		String authorization = calculateRFC2104HMAC(stringToSignBuilder.toString(), keyParameter);
-		stringToSignBuilder.clear();
+        stringToSignBuilder.append("AWS ").append(credentials.getAWSAccessKeyId()).append(':').append(authorization);
 
-		stringToSignBuilder.append("AWS ").append(accessKey).append(':').append(authorization);
+        requestBuilder.addHeader(HEADER_AUTHORIZATION, stringToSignBuilder.toString());
+        requestBuilder.addHeader(HEADER_DATE, dateString);
+    }
 
-		requestBuilder.addHeader(HEADER_AUTHORIZATION, stringToSignBuilder.toString());
-		requestBuilder.addHeader(HEADER_DATE, dateString);
-	}
+    public String calculateRFC2104HMAC(String stringToSign, KeyParameter keyParameter) {
+        hmac.init(keyParameter);
 
-	public String calculateRFC2104HMAC(String stringToSign, KeyParameter keyParameter) {
-		hmac.init(keyParameter);
+        byte[] stringToSignBytes = stringToSign.getBytes();
+        hmac.update(stringToSignBytes, 0, stringToSignBytes.length);
 
-		byte[] stringToSignBytes = stringToSign.getBytes();
-		hmac.update(stringToSignBytes, 0, stringToSignBytes.length);
-
-		hmac.doFinal(signingResultHolder, 0);
-		return Base64.encode(signingResultHolder);
-	}
+        hmac.doFinal(signingResultHolder, 0);
+        return Base64.encode(signingResultHolder);
+    }
 }

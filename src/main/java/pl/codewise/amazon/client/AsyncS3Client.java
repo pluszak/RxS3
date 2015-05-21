@@ -55,7 +55,7 @@ public class AsyncS3Client implements Closeable {
 		signatureCalculators = new ThreadLocal<AWSSignatureCalculatorFactory>() {
 			@Override
 			protected AWSSignatureCalculatorFactory initialValue() {
-				return new AWSSignatureCalculatorFactory(configuration.getCredentials(), s3Location);
+				return new AWSSignatureCalculatorFactory(configuration.getCredentialsProvider(), s3Location);
 			}
 		};
 	}
