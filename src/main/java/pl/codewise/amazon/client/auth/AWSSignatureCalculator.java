@@ -2,6 +2,7 @@ package pl.codewise.amazon.client.auth;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSSessionCredentials;
 import com.google.common.collect.Iterables;
 import com.ning.http.client.Request;
 import com.ning.http.client.RequestBuilderBase;
@@ -22,6 +23,7 @@ public class AWSSignatureCalculator implements SignatureCalculator {
     private static final FastDateFormat RFC_822_DATE_FORMAT = FastDateFormat.getInstance("EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
 
     public final static String HEADER_AUTHORIZATION = "Authorization";
+    public final static String HEADER_TOKEN = "x-amz-security-token";
     public final static String HEADER_DATE = "Date";
 
     private final String s3Location;
@@ -84,6 +86,10 @@ public class AWSSignatureCalculator implements SignatureCalculator {
         operation.getResourceName(stringToSignBuilder, request);
 
         AWSCredentials credentials = credentialsProvider.getCredentials();
+        if(credentials instanceof AWSSessionCredentials) {
+            requestBuilder.addHeader(HEADER_TOKEN, ((AWSSessionCredentials) credentials).getSessionToken());
+        }
+
         KeyParameter keyParameter = new KeyParameter(credentials.getAWSSecretKey().getBytes());
         String authorization = calculateRFC2104HMAC(stringToSignBuilder.toString(), keyParameter);
         stringToSignBuilder.clear();
