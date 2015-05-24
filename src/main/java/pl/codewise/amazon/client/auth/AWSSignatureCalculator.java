@@ -78,17 +78,24 @@ public class AWSSignatureCalculator implements SignatureCalculator {
                 .append(contentType)
                 .append('\n')
                 .append(dateString)
-                .append('\n')
-                .append('/');
+                .append('\n');
+
+        AWSCredentials credentials = credentialsProvider.getCredentials();
+        if (credentials instanceof AWSSessionCredentials) {
+            String sessionToken = ((AWSSessionCredentials) credentials).getSessionToken();
+            requestBuilder.addHeader(HEADER_TOKEN, sessionToken);
+            stringToSignBuilder
+                    .append(HEADER_TOKEN)
+                    .append(':')
+                    .append(sessionToken)
+                    .append('\n');
+        }
+
+        stringToSignBuilder.append('/');
 
         String virtualHost = request.getVirtualHost();
         stringToSignBuilder.append(virtualHost, 0, virtualHost.length() - s3Location.length() - 1);
         operation.getResourceName(stringToSignBuilder, request);
-
-        AWSCredentials credentials = credentialsProvider.getCredentials();
-        if(credentials instanceof AWSSessionCredentials) {
-            requestBuilder.addHeader(HEADER_TOKEN, ((AWSSessionCredentials) credentials).getSessionToken());
-        }
 
         KeyParameter keyParameter = new KeyParameter(credentials.getAWSSecretKey().getBytes());
         String authorization = calculateRFC2104HMAC(stringToSignBuilder.toString(), keyParameter);
