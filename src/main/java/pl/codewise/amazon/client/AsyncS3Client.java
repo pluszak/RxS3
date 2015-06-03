@@ -18,6 +18,7 @@ import rx.Subscriber;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
 
 import static pl.codewise.amazon.client.RestUtils.appendQueryString;
 
@@ -64,7 +65,7 @@ public class AsyncS3Client implements Closeable {
 		this(configuration, httpClientFactory.getHttpClient());
 	}
 
-	public Observable<byte[]> putObject(String bucketName, String key, byte[] data, ObjectMetadata metadata) throws IOException {
+	public Observable<InputStream> putObject(String bucketName, String key, byte[] data, ObjectMetadata metadata) throws IOException {
 		String virtualHost = getVirtualHost(bucketName);
 
 		Request request = httpClient.preparePut(s3Url + "/" + key)
@@ -186,7 +187,7 @@ public class AsyncS3Client implements Closeable {
 		return retrieveResult(request, listResponseParser);
 	}
 
-	public Observable<byte[]> getObject(String bucketName, String location) throws IOException {
+	public Observable<InputStream> getObject(String bucketName, String location) throws IOException {
 		TextBuilder urlBuilder = new TextBuilder();
 		urlBuilder.append(s3Url).append("/");
 		UTF8UrlEncoder.appendEncoded(urlBuilder, location);
