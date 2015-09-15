@@ -2,7 +2,10 @@ publishing.publications.all {
     pom.withXml {
         def root = asNode()
         root.appendNode('name', 'RxS3')
-        root.appendNode('packaging', 'jar')
+
+        def packaging = root.get('packaging').get(0)
+        packaging.setValue('jar')
+
         root.appendNode('url', 'http://tkowalcz.github.io/RxS3')
         root.appendNode('description', 'Lightweight asynchronous S3 client')
         def license = root.appendNode('licenses').appendNode('license')
