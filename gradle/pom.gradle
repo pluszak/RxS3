@@ -3,8 +3,7 @@ publishing.publications.all {
         def root = asNode()
         root.appendNode('name', 'RxS3')
 
-        def packaging = root.get('packaging').get(0)
-        packaging.setValue('jar')
+        root.appendNode('packaging', 'jar')
 
         root.appendNode('url', 'http://tkowalcz.github.io/RxS3')
         root.appendNode('description', 'Lightweight asynchronous S3 client')
