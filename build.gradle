@@ -106,7 +106,13 @@ publishing {
             artifactId 'rxs3'
 
             from components.java
-            artifact sourcesJar
+            artifact sourcesJar {
+                classifier "sources"
+            }
+
+            artifact shadowJar {
+                classifier ""
+            }
         }
     }
 }
