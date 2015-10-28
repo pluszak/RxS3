@@ -1,9 +1,10 @@
 package pl.codewise.amazon.client.xml;
 
-import com.ning.http.client.Response;
-
 import java.io.IOException;
 import java.util.Optional;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpResponseStatus;
 
 public class DiscardBytesParser extends GenericResponseParser<Object> {
 
@@ -18,7 +19,7 @@ public class DiscardBytesParser extends GenericResponseParser<Object> {
 	}
 
 	@Override
-	public Optional<Object> parse(Response response) throws IOException {
+	public Optional<Object> parse(HttpResponseStatus status, ByteBuf content) throws IOException {
 		return Optional.empty();
 	}
 }

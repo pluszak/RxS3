@@ -1,25 +1,27 @@
 package pl.codewise.amazon.client.xml;
 
-import com.ning.http.client.Response;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Optional;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.handler.codec.http.HttpResponseStatus;
+
 public class ConsumeBytesParser extends GenericResponseParser<InputStream> {
 
-	private static final ConsumeBytesParser INSTANCE = new ConsumeBytesParser();
+    private static final ConsumeBytesParser INSTANCE = new ConsumeBytesParser();
 
-	public static ConsumeBytesParser getInstance() {
-		return INSTANCE;
-	}
+    public static ConsumeBytesParser getInstance() {
+        return INSTANCE;
+    }
 
-	private ConsumeBytesParser() {
-		super(null, null);
-	}
+    private ConsumeBytesParser() {
+        super(null, null);
+    }
 
-	@Override
-	public Optional<InputStream> parse(Response response) throws IOException {
-		return Optional.of(response.getResponseBodyAsStream());
-	}
+    @Override
+    public Optional<InputStream> parse(HttpResponseStatus status, ByteBuf content) throws IOException {
+        return Optional.of(new ByteBufInputStream(content));
+    }
 }

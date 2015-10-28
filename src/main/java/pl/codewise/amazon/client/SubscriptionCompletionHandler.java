@@ -1,76 +1,82 @@
 package pl.codewise.amazon.client;
 
-import com.ning.http.client.AsyncCompletionHandler;
-import com.ning.http.client.Response;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.Optional;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import pl.codewise.amazon.client.xml.ErrorResponseParser;
 import pl.codewise.amazon.client.xml.GenericResponseParser;
 import rx.Observer;
 import rx.Subscriber;
 
-import java.io.IOException;
-import java.util.Optional;
-
 import static org.slf4j.LoggerFactory.getLogger;
 
-class SubscriptionCompletionHandler<T> extends AsyncCompletionHandler<T> {
+public class SubscriptionCompletionHandler<T> implements Observer<Pair<HttpResponseStatus, ByteBuf>> {
 
-	private static final Logger LOGGER = getLogger(SubscriptionCompletionHandler.class);
+    private static final Logger LOGGER = getLogger(SubscriptionCompletionHandler.class);
 
-	private final Subscriber<? super T> subscriber;
+    private final Subscriber<? super T> subscriber;
 
-	private final GenericResponseParser<T> responseParser;
-	private final ErrorResponseParser errorResponseParser;
+    private final GenericResponseParser<T> responseParser;
+    private final ErrorResponseParser errorResponseParser;
 
-	public SubscriptionCompletionHandler(Subscriber<? super T> subscriber, GenericResponseParser<T> responseParser, ErrorResponseParser errorResponseParser) {
-		this.subscriber = subscriber;
+    public SubscriptionCompletionHandler(Subscriber<? super T> subscriber, GenericResponseParser<T> responseParser, ErrorResponseParser errorResponseParser) {
+        this.subscriber = subscriber;
 
-		this.responseParser = responseParser;
-		this.errorResponseParser = errorResponseParser;
-	}
+        this.responseParser = responseParser;
+        this.errorResponseParser = errorResponseParser;
+    }
 
-	@Override
-	public T onCompleted(Response response) throws IOException {
-		if (LOGGER.isTraceEnabled()) {
-			LOGGER.trace("Amazon response '{}'", response.getResponseBody());
-		}
+    @Override
+    public void onNext(Pair<HttpResponseStatus, ByteBuf> response) {
+        if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace("Amazon response '{}'", response.getRight().toString(Charset.defaultCharset()));
+        }
 
-		if (subscriber.isUnsubscribed()) {
-			return ignoreReturnValue();
-		}
+        if (subscriber.isUnsubscribed()) {
+            return;
+        }
 
-		if (!emitExceptionIfUnsuccessful(response, subscriber)) {
-			try {
-				Optional<T> result = responseParser.parse(response);
-				if (result.isPresent()) {
-					subscriber.onNext(result.get());
-				}
+        if (!emitExceptionIfUnsuccessful(response.getKey(), response.getValue(), subscriber)) {
+            try {
+                Optional<T> result = responseParser.parse(response.getKey(), response.getValue());
+                if (result.isPresent()) {
+                    subscriber.onNext(result.get());
+                }
 
-				subscriber.onCompleted();
-			} catch (Exception e) {
-				subscriber.onError(e);
-			}
-		}
+                subscriber.onCompleted();
+            } catch (Exception e) {
+                subscriber.onError(e);
+            }
+        }
+    }
 
-		return ignoreReturnValue();
-	}
+    @Override
+    public void onCompleted() {
 
-	@Override
-	public void onThrowable(Throwable t) {
-		LOGGER.error("Error while processing S3 request", t);
-		subscriber.onError(t);
-	}
+    }
 
-	private boolean emitExceptionIfUnsuccessful(Response response, Observer<?> observer) throws IOException {
-		if (response.getStatusCode() != 200 && response.getStatusCode() != 204) {
-			observer.onError(errorResponseParser.parse(response).get().build());
-			return true;
-		}
+    @Override
+    public void onError(Throwable t) {
+        LOGGER.error("Error while processing S3 request", t);
+        subscriber.onError(t);
+    }
 
-		return false;
-	}
+    private boolean emitExceptionIfUnsuccessful(HttpResponseStatus status, ByteBuf content, Observer<?> observer) {
+        if (!status.equals(HttpResponseStatus.OK) && !status.equals(HttpResponseStatus.NO_CONTENT)) {
+            try {
+                observer.onError(errorResponseParser.parse(status, content).get().build());
+            } catch (IOException e) {
+                observer.onError(e);
+            }
 
-	T ignoreReturnValue() {
-		return null;
-	}
+            return true;
+        }
+
+        return false;
+    }
 }

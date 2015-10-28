@@ -1,22 +1,18 @@
 package pl.codewise.amazon.client.auth;
 
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Locale;
+
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSSessionCredentials;
-import com.google.common.collect.Iterables;
-import com.ning.http.client.Request;
-import com.ning.http.client.RequestBuilderBase;
-import com.ning.http.client.SignatureCalculator;
-import com.ning.http.util.Base64;
+import io.netty.handler.codec.http.HttpHeaders;
 import javolution.text.TextBuilder;
 import org.apache.commons.lang3.time.FastDateFormat;
 import org.bouncycastle.crypto.digests.SHA1Digest;
 import org.bouncycastle.crypto.macs.HMac;
 import org.bouncycastle.crypto.params.KeyParameter;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
 
 public class AWSSignatureCalculator implements SignatureCalculator {
 
@@ -43,11 +39,10 @@ public class AWSSignatureCalculator implements SignatureCalculator {
         this.operation = operation;
     }
 
-    @SuppressWarnings("StringBufferReplaceableByString")
     @Override
-    public void calculateAndAddSignature(Request request, RequestBuilderBase<?> requestBuilder) {
+    public void calculateAndAddSignature(HttpHeaders httpHeaders, String objectName, String contentMd5, String contentType, String virtualHost) {
         try {
-            calculateAndAddSignatureInternal(request, requestBuilder);
+            calculateAndAddSignatureInternal(httpHeaders, objectName, contentMd5, contentType, virtualHost);
         } finally {
             stringToSignBuilder.clear();
             Arrays.fill(signingResultHolder, (byte) 0);
@@ -55,20 +50,7 @@ public class AWSSignatureCalculator implements SignatureCalculator {
         }
     }
 
-    private void calculateAndAddSignatureInternal(Request request, RequestBuilderBase<?> requestBuilder) {
-        String contentMd5 = "";
-        String contentType = "";
-
-        List<String> strings = request.getHeaders().get("Content-MD5");
-        if (strings != null && !strings.isEmpty()) {
-            contentMd5 = Iterables.getLast(strings);
-        }
-
-        strings = request.getHeaders().get("Content-Type");
-        if (strings != null && !strings.isEmpty()) {
-            contentType = Iterables.getLast(strings);
-        }
-
+    private void calculateAndAddSignatureInternal(HttpHeaders httpHeaders, String objectName, String contentMd5, String contentType, String virtualHost) {
         String dateString = RFC_822_DATE_FORMAT.format(System.currentTimeMillis());
         stringToSignBuilder
                 .append(operation.getOperationName())
@@ -83,7 +65,7 @@ public class AWSSignatureCalculator implements SignatureCalculator {
         AWSCredentials credentials = credentialsProvider.getCredentials();
         if (credentials instanceof AWSSessionCredentials) {
             String sessionToken = ((AWSSessionCredentials) credentials).getSessionToken();
-            requestBuilder.addHeader(HEADER_TOKEN, sessionToken);
+            httpHeaders.set(HEADER_TOKEN, sessionToken);
             stringToSignBuilder
                     .append(HEADER_TOKEN)
                     .append(':')
@@ -93,9 +75,8 @@ public class AWSSignatureCalculator implements SignatureCalculator {
 
         stringToSignBuilder.append('/');
 
-        String virtualHost = request.getVirtualHost();
-        stringToSignBuilder.append(virtualHost, 0, virtualHost.length() - s3Location.length() - 1);
-        operation.getResourceName(stringToSignBuilder, request);
+        stringToSignBuilder.append(virtualHost);
+        operation.getResourceName(stringToSignBuilder, objectName);
 
         KeyParameter keyParameter = new KeyParameter(credentials.getAWSSecretKey().getBytes());
         String authorization = calculateRFC2104HMAC(stringToSignBuilder.toString(), keyParameter);
@@ -103,8 +84,8 @@ public class AWSSignatureCalculator implements SignatureCalculator {
 
         stringToSignBuilder.append("AWS ").append(credentials.getAWSAccessKeyId()).append(':').append(authorization);
 
-        requestBuilder.addHeader(HEADER_AUTHORIZATION, stringToSignBuilder.toString());
-        requestBuilder.addHeader(HEADER_DATE, dateString);
+        httpHeaders.set(HEADER_AUTHORIZATION, stringToSignBuilder.toString());
+        httpHeaders.set(HEADER_DATE, dateString);
     }
 
     public String calculateRFC2104HMAC(String stringToSign, KeyParameter keyParameter) {
@@ -114,6 +95,6 @@ public class AWSSignatureCalculator implements SignatureCalculator {
         hmac.update(stringToSignBytes, 0, stringToSignBytes.length);
 
         hmac.doFinal(signingResultHolder, 0);
-        return Base64.encode(signingResultHolder);
+        return Base64.getEncoder().encodeToString(signingResultHolder);
     }
 }

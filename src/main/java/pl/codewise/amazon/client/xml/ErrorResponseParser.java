@@ -1,33 +1,35 @@
 package pl.codewise.amazon.client.xml;
 
-import com.ning.http.client.Response;
+import java.io.IOException;
+import java.util.Optional;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xmlpull.v1.XmlPullParserFactory;
 import pl.codewise.amazon.client.xml.handlers.ErrorTagHandler;
 
-import java.io.IOException;
-import java.util.Optional;
-
 public class ErrorResponseParser extends GenericResponseParser<AmazonS3ExceptionBuilder> {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(ErrorResponseParser.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ErrorResponseParser.class);
 
-	public ErrorResponseParser(XmlPullParserFactory pullParserFactory) {
-		super(pullParserFactory, ErrorTagHandler.UNKNOWN, ErrorTagHandler.values());
-	}
+    public ErrorResponseParser(XmlPullParserFactory pullParserFactory) {
+        super(pullParserFactory, ErrorTagHandler.UNKNOWN, ErrorTagHandler.values());
+    }
 
-	public AmazonS3ExceptionBuilder parseResponse(Response response) throws IOException {
-		AmazonS3ExceptionBuilder exceptionBuilder = new AmazonS3ExceptionBuilder();
-		exceptionBuilder.setStatusCode(response.getStatusCode());
+    public AmazonS3ExceptionBuilder parseResponse(HttpResponseStatus status, ByteBuf content) throws IOException {
+        AmazonS3ExceptionBuilder exceptionBuilder = new AmazonS3ExceptionBuilder();
+        exceptionBuilder.setStatusCode(status.code());
 
-		LOGGER.error("Error response body:\n{}", response.getResponseBody());
-		parse(response.getResponseBodyAsStream(), exceptionBuilder);
+        LOGGER.error("Error content body:\n{}", content);
+        parse(new ByteBufInputStream(content), exceptionBuilder);
 
-		return exceptionBuilder;
-	}
+        return exceptionBuilder;
+    }
 
-	public Optional<AmazonS3ExceptionBuilder> parse(Response response) throws IOException {
-		return Optional.of(parseResponse(response));
-	}
+    public Optional<AmazonS3ExceptionBuilder> parse(HttpResponseStatus status, ByteBuf content) throws IOException {
+        return Optional.of(parseResponse(status, content));
+    }
 }
