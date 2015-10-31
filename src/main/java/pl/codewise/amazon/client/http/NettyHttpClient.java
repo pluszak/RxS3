@@ -25,13 +25,21 @@ public class NettyHttpClient implements AutoCloseable {
     public NettyHttpClient(ClientConfiguration configuration) {
         group = new NioEventLoopGroup();
 
+        String[] s3LocationArray = configuration.getS3Location().trim().split(":");
+
+        String s3Location = s3LocationArray[0];
+        int port = 80;
+        if (s3LocationArray.length == 2) {
+            port = Integer.parseInt(s3LocationArray[1]);
+        }
+
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(group)
                 .option(ChannelOption.SO_KEEPALIVE, true)
                 .option(ChannelOption.TCP_NODELAY, true)
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, configuration.getConnectionTimeoutMillis())
                 .channel(NioSocketChannel.class)
-                .remoteAddress(configuration.getS3Location(), 80);
+                .remoteAddress(s3Location, port);
 
         channelPool = new FixedChannelPool(bootstrap, new AbstractChannelPoolHandler() {
 

@@ -27,8 +27,6 @@ public class AsyncS3Client implements Closeable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AsyncS3Client.class);
 
-    private final String s3Location;
-
     private final NettyHttpClient httpClient;
 
     private final ListResponseParser listResponseParser;
@@ -38,8 +36,6 @@ public class AsyncS3Client implements Closeable {
 
     public AsyncS3Client(ClientConfiguration configuration, NettyHttpClient httpClient) {
         this.httpClient = httpClient;
-
-        s3Location = configuration.getS3Location();
 
         try {
             XmlPullParserFactory pullParserFactory = XmlPullParserFactory.newInstance();
@@ -54,7 +50,7 @@ public class AsyncS3Client implements Closeable {
         signatureCalculators = new ThreadLocal<AWSSignatureCalculatorFactory>() {
             @Override
             protected AWSSignatureCalculatorFactory initialValue() {
-                return new AWSSignatureCalculatorFactory(configuration.getCredentialsProvider(), s3Location);
+                return new AWSSignatureCalculatorFactory(configuration.getCredentialsProvider(), configuration.getS3Location());
             }
         };
     }
