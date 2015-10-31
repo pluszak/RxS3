@@ -1,5 +1,13 @@
 package pl.codewise.amazon.client;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
+import java.util.concurrent.ExecutionException;
+
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
@@ -20,14 +28,6 @@ import org.testng.annotations.Test;
 import rx.Observable;
 import rx.Subscriber;
 import rx.subjects.PublishSubject;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.List;
-import java.util.Locale;
-import java.util.TimeZone;
-import java.util.concurrent.ExecutionException;
 
 import static org.slf4j.LoggerFactory.getLogger;
 import static pl.codewise.amazon.client.AsyncS3ClientAssertions.assertThat;
@@ -173,7 +173,8 @@ public class AsyncS3ClientTest {
 
         assertThat(completedSubject)
                 .ignoreFields(fieldsToIgnore)
-                .isEqualTo(amazonListing).isNotTruncated();
+                .isEqualTo(amazonListing)
+                .isNotTruncated();
     }
 
     @Test

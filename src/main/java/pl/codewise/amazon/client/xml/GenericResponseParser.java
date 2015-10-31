@@ -1,16 +1,17 @@
 package pl.codewise.amazon.client.xml;
 
-import com.ning.http.client.Response;
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserException;
-import org.xmlpull.v1.XmlPullParserFactory;
-import pl.codewise.amazon.client.xml.handlers.TagHandler;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+import org.xmlpull.v1.XmlPullParserFactory;
+import pl.codewise.amazon.client.xml.handlers.TagHandler;
 
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.toMap;
@@ -46,7 +47,7 @@ public abstract class GenericResponseParser<Context> {
 		}
 	}
 
-	public abstract Optional<Context> parse(Response response) throws IOException;
+	public abstract Optional<Context> parse(HttpResponseStatus status, ByteBuf content) throws IOException;
 
 	private void processContents(XmlPullParser parser, Context context) throws XmlPullParserException, IOException {
 		ContextStack<Context> handlerStack = ContextStack.<Context>getInstance();

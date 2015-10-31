@@ -33,7 +33,7 @@ compileJava {
 }
 
 dependencies {
-    compile('com.amazonaws:aws-java-sdk-s3:1.9.0') {
+    compile('com.amazonaws:aws-java-sdk-s3:1.10.26') {
         exclude group: 'log4j'
     }
 
@@ -41,6 +41,8 @@ dependencies {
     compile group: 'com.ning', name: 'async-http-client', version: '1.9.29'
     compile group: 'com.google.guava', name: 'guava', version: '18.0'
     compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.3.2'
+    compile group: 'io.netty', name: 'netty-all', version: '4.1.0.Beta7'
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.4'
     compile group: 'commons-io', name: 'commons-io', version: '2.4'
     compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.7'
     compile group: 'org.bouncycastle', name: 'bcprov-jdk15', version: '1.45'
