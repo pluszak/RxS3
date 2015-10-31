@@ -22,15 +22,12 @@ import rx.Subscriber;
 
 import static pl.codewise.amazon.client.RestUtils.appendQueryString;
 
-//import pl.codewise.amazon.client.xml.GenericResponseParser;
-
 @SuppressWarnings("UnusedDeclaration")
 public class AsyncS3Client implements Closeable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AsyncS3Client.class);
 
     private final String s3Location;
-    private final String s3Url;
 
     private final NettyHttpClient httpClient;
 
@@ -43,7 +40,6 @@ public class AsyncS3Client implements Closeable {
         this.httpClient = httpClient;
 
         s3Location = configuration.getS3Location();
-        s3Url = s3Location;
 
         try {
             XmlPullParserFactory pullParserFactory = XmlPullParserFactory.newInstance();
@@ -64,7 +60,11 @@ public class AsyncS3Client implements Closeable {
     }
 
     public AsyncS3Client(ClientConfiguration configuration, HttpClientFactory httpClientFactory) {
-        this(configuration, httpClientFactory.getHttpClient());
+        this(configuration, httpClientFactory.getHttpClient(configuration));
+    }
+
+    public int acquiredConnections() {
+        return httpClient.acquiredConnections();
     }
 
     public Observable<InputStream> putObject(String bucketName, String key, byte[] data, ObjectMetadata metadata) throws IOException {

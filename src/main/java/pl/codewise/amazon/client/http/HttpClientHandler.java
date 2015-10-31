@@ -44,12 +44,11 @@ public class HttpClientHandler extends SimpleChannelInboundHandler<HttpObject> {
                 Attribute<SubscriptionCompletionHandler> handlerAttribute = ctx.attr(HANDLER_ATTRIBUTE_KEY);
                 SubscriptionCompletionHandler handler = handlerAttribute.getAndRemove();
 
-                if (keepAlive) {
-                    channelPool.release(ctx.channel());
-                } else {
+                if (!keepAlive) {
                     ctx.close();
                 }
 
+                channelPool.release(ctx.channel());
                 handler.onNext(Pair.of(status, result));
                 handler.onCompleted();
             }

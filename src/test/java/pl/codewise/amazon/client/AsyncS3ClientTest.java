@@ -22,9 +22,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.testng.annotations.*;
 import rx.Observable;
 import rx.Subscriber;
 import rx.subjects.PublishSubject;
@@ -111,6 +109,16 @@ public class AsyncS3ClientTest {
         UK.deleteFromS3(amazonS3Client, bucketName);
     }
 
+    @BeforeMethod
+    public void beforeTest() {
+        assertThat(client.acquiredConnections()).isEqualTo(0);
+    }
+
+    @AfterMethod
+    public void afterTest() {
+        assertThat(client.acquiredConnections()).isEqualTo(0);
+    }
+
     @Test
     public void shouldListObjectsInBucket() throws IOException {
         // When
@@ -165,9 +173,9 @@ public class AsyncS3ClientTest {
             completedSubject.onNext(objectListing);
             if (!objectListing.isTruncated()) {
                 completedSubject.onCompleted();
+            } else {
+                client.listNextBatchOfObjects(objectListing).subscribe(inProgressSubject::onNext);
             }
-
-            client.listNextBatchOfObjects(objectListing).subscribe(inProgressSubject::onNext);
         });
         listing.subscribe(inProgressSubject::onNext);
 
