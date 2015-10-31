@@ -13,6 +13,6 @@ public class HttpClientInitializer {
 
         p.addLast(new HttpClientCodec());
         p.addLast(new HttpContentDecompressor());
-        p.addLast(new HttpClientHandler<>(channelPool));
+        p.addLast(new HttpClientHandler(channelPool));
     }
 }
