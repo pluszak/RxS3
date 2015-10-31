@@ -12,7 +12,6 @@ import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.FixedChannelPool;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.http.HttpMethod;
 import io.netty.util.concurrent.Future;
 import pl.codewise.amazon.client.ClientConfiguration;
 import pl.codewise.amazon.client.SubscriptionCompletionHandler;
@@ -76,7 +75,11 @@ public class NettyHttpClient implements AutoCloseable {
 
     @Override
     public void close() {
-        group.shutdownGracefully();
+        try {
+            group.shutdownGracefully().sync();
+        } catch (InterruptedException e) {
+            // ignore
+        }
     }
 
     public int acquiredConnections() {
