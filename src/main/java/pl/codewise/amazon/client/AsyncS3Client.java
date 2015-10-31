@@ -214,10 +214,6 @@ public class AsyncS3Client implements Closeable {
         httpClient.close();
     }
 
-    private <T> void retrieveResult(Request request, Void responseParser, Subscriber<? super T> observer) {
-        httpClient.executeRequest(request, null);
-    }
-
     private <T> void retrieveResult(Request request, GenericResponseParser<T> responseParser, Subscriber<? super T> observer) {
         httpClient.executeRequest(request, new SubscriptionCompletionHandler<>(observer, responseParser, errorResponseParser));
     }

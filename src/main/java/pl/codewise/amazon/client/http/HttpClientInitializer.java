@@ -1,18 +1,18 @@
 package pl.codewise.amazon.client.http;
 
-import io.netty.channel.ChannelInitializer;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 
-public class HttpSnoopClientInitializer extends ChannelInitializer<SocketChannel> {
+public class HttpClientInitializer {
 
-    @Override
-    public void initChannel(SocketChannel ch) {
+    public void initChannel(ChannelPool channelPool, Channel ch) {
         ChannelPipeline p = ch.pipeline();
 
         p.addLast(new HttpClientCodec());
         p.addLast(new HttpContentDecompressor());
+        p.addLast(new HttpClientHandler<>(channelPool));
     }
 }
