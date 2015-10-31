@@ -33,19 +33,19 @@ compileJava {
 }
 
 dependencies {
-    compile('com.amazonaws:aws-java-sdk-s3:1.10.26') {
+    compile('com.amazonaws:aws-java-sdk-s3:1.9.13') {
         exclude group: 'log4j'
     }
 
     compile group: 'io.reactivex', name: 'rxjava', version: '1.0.14'
-    compile group: 'com.google.guava', name: 'guava', version: '18.0'
     compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.3.2'
     compile group: 'io.netty', name: 'netty-all', version: '4.1.0.Beta7'
-    compile group: 'commons-io', name: 'commons-io', version: '2.4'
     compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.7'
     compile group: 'org.bouncycastle', name: 'bcprov-jdk15', version: '1.45'
     compile group: 'xpp3', name: 'xpp3', version: '1.1.4c'
     compile group: 'org.javolution', name: 'javolution-core-java', version: '6.0.0'
+
+    testCompile group: 'commons-io', name: 'commons-io', version: '2.4'
 
     testCompile group: 'log4j', name: 'log4j', version: '1.2.17'
     testCompile group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.9'

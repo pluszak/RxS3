@@ -3,6 +3,7 @@ package pl.codewise.amazon.client;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -14,7 +15,6 @@ import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
-import com.google.common.collect.Lists;
 import com.googlecode.catchexception.CatchException;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -51,7 +51,7 @@ public class AsyncS3ClientTest {
 
     protected ClientConfiguration configuration;
 
-    protected List<String> fieldsToIgnore = Lists.newArrayList();
+    protected List<String> fieldsToIgnore = new ArrayList<>();
 
     private AmazonS3Client amazonS3Client;
     private AsyncS3Client client;
