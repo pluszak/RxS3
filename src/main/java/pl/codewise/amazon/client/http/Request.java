@@ -2,16 +2,17 @@ package pl.codewise.amazon.client.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http.HttpMethod;
 import pl.codewise.amazon.client.auth.AWSSignatureCalculator;
+import pl.codewise.amazon.client.auth.AWSSignatureCalculatorFactory;
+import pl.codewise.amazon.client.auth.Operation;
 
 public class Request {
 
     private String url;
-    private HttpMethod method;
+    private Operation operation;
 
     private String bucketName;
-    private AWSSignatureCalculator signatureCalculator;
+    private AWSSignatureCalculatorFactory signatureCalculatorFactory;
 
     private byte[] body;
 
@@ -19,9 +20,9 @@ public class Request {
     private long contentLength;
     private String md5 = "";
 
-    public Request(String url, HttpMethod method) {
+    public Request(String url, Operation operation) {
         this.url = url;
-        this.method = method;
+        this.operation = operation;
     }
 
     public Request setBucketName(String bucketName) {
@@ -29,8 +30,8 @@ public class Request {
         return this;
     }
 
-    public Request setSignatureCalculator(AWSSignatureCalculator signatureCalculator) {
-        this.signatureCalculator = signatureCalculator;
+    public Request setSignatureCalculatorFactory(AWSSignatureCalculatorFactory signatureCalculatorFactory) {
+        this.signatureCalculatorFactory = signatureCalculatorFactory;
         return this;
     }
 
@@ -54,8 +55,8 @@ public class Request {
         return this;
     }
 
-    public HttpMethod getMethod() {
-        return method;
+    public Operation getOperation() {
+        return operation;
     }
 
     public String getUrl() {
@@ -66,8 +67,8 @@ public class Request {
         return bucketName;
     }
 
-    public AWSSignatureCalculator getSignatureCalculator() {
-        return signatureCalculator;
+    public AWSSignatureCalculatorFactory getSignatureCalculatorFactory() {
+        return signatureCalculatorFactory;
     }
 
     public ByteBuf getBody() {

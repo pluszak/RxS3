@@ -1,23 +1,24 @@
 package pl.codewise.amazon.client.auth;
 
+import io.netty.handler.codec.http.HttpMethod;
 import javolution.text.TextBuilder;
 
 public enum Operation {
-    GET,
-    PUT {
+    GET(HttpMethod.GET),
+    PUT(HttpMethod.PUT) {
         @Override
         public void getResourceName(TextBuilder builder, CharSequence objectName) {
             builder.append(objectName);
         }
     },
-    LIST("GET") {
+    LIST(HttpMethod.GET) {
         @Override
         public void getResourceName(TextBuilder builder, CharSequence objectName) {
             builder.append('/');
         }
     },
-    DELETE,
-    BULK_DELETE("POST") {
+    DELETE(HttpMethod.DELETE),
+    BULK_DELETE(HttpMethod.POST) {
         @Override
         public void getResourceName(TextBuilder builder, CharSequence objectName) {
             super.getResourceName(builder, objectName);
@@ -25,14 +26,10 @@ public enum Operation {
         }
     };
 
-    private String operationName;
+    private final HttpMethod httpMethod;
 
-    Operation() {
-        operationName = name();
-    }
-
-    Operation(String operationName) {
-        this.operationName = operationName;
+    Operation(HttpMethod httpMethod) {
+        this.httpMethod = httpMethod;
     }
 
     public void getResourceName(TextBuilder builder, CharSequence objectName) {
@@ -40,7 +37,7 @@ public enum Operation {
         builder.append(objectName, 1, objectName.length());
     }
 
-    public String getOperationName() {
-        return operationName;
+    public HttpMethod getHttpMethod() {
+        return httpMethod;
     }
 }

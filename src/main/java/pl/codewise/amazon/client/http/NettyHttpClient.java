@@ -16,6 +16,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.util.concurrent.Future;
 import pl.codewise.amazon.client.ClientConfiguration;
 import pl.codewise.amazon.client.SubscriptionCompletionHandler;
+import pl.codewise.amazon.client.auth.Operation;
 
 public class NettyHttpClient implements AutoCloseable {
 
@@ -53,15 +54,19 @@ public class NettyHttpClient implements AutoCloseable {
     }
 
     public Request prepareGet(String url) {
-        return new Request(url, HttpMethod.GET);
+        return new Request(url, Operation.GET);
+    }
+
+    public Request prepareList(String url) {
+        return new Request(url, Operation.LIST);
     }
 
     public Request preparePut(String url) {
-        return new Request(url, HttpMethod.PUT);
+        return new Request(url, Operation.PUT);
     }
 
     public Request prepareDelete(String url) {
-        return new Request(url, HttpMethod.DELETE);
+        return new Request(url, Operation.DELETE);
     }
 
     public <T> void executeRequest(Request requestData, SubscriptionCompletionHandler<T> completionHandler) {

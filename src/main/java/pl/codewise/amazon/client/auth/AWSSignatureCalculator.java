@@ -13,6 +13,7 @@ import org.apache.commons.lang3.time.FastDateFormat;
 import org.bouncycastle.crypto.digests.SHA1Digest;
 import org.bouncycastle.crypto.macs.HMac;
 import org.bouncycastle.crypto.params.KeyParameter;
+import pl.codewise.amazon.client.http.Request;
 
 public class AWSSignatureCalculator implements SignatureCalculator {
 
@@ -22,27 +23,22 @@ public class AWSSignatureCalculator implements SignatureCalculator {
     public final static String HEADER_TOKEN = "x-amz-security-token";
     public final static String HEADER_DATE = "Date";
 
-    private final String s3Location;
-
     private final AWSCredentialsProvider credentialsProvider;
 
     private final HMac hmac = new HMac(new SHA1Digest());
     private final byte[] signingResultHolder = new byte[hmac.getMacSize()];
 
     private final TextBuilder stringToSignBuilder = new TextBuilder();
-    private final Operation operation;
 
-    public AWSSignatureCalculator(AWSCredentialsProvider credentialsProvider, Operation operation, String s3Location) {
+    public AWSSignatureCalculator(AWSCredentialsProvider credentialsProvider) {
         this.credentialsProvider = credentialsProvider;
-        this.s3Location = s3Location;
-
-        this.operation = operation;
     }
 
     @Override
-    public void calculateAndAddSignature(HttpHeaders httpHeaders, String objectName, String contentMd5, String contentType, String virtualHost) {
+    public void calculateAndAddSignature(HttpHeaders headers, Request requestData) {
         try {
-            calculateAndAddSignatureInternal(httpHeaders, objectName, contentMd5, contentType, virtualHost);
+            calculateAndAddSignatureInternal(headers, requestData.getOperation(),
+                    requestData.getUrl(), requestData.getMd5(), requestData.getContentType(), requestData.getBucketName());
         } finally {
             stringToSignBuilder.clear();
             Arrays.fill(signingResultHolder, (byte) 0);
@@ -50,10 +46,11 @@ public class AWSSignatureCalculator implements SignatureCalculator {
         }
     }
 
-    private void calculateAndAddSignatureInternal(HttpHeaders httpHeaders, String objectName, String contentMd5, String contentType, String virtualHost) {
+    private void calculateAndAddSignatureInternal(HttpHeaders httpHeaders, Operation operation,
+                                                  String objectName, String contentMd5, String contentType, String virtualHost) {
         String dateString = RFC_822_DATE_FORMAT.format(System.currentTimeMillis());
         stringToSignBuilder
-                .append(operation.getOperationName())
+                .append(operation.getHttpMethod())
                 .append('\n')
                 .append(contentMd5)
                 .append('\n')

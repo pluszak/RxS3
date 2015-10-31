@@ -1,13 +1,16 @@
 package pl.codewise.amazon.client.http;
 
 import io.netty.channel.Channel;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.GenericFutureListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.codewise.amazon.client.SubscriptionCompletionHandler;
+import pl.codewise.amazon.client.auth.Operation;
 
 public class RequestSender implements FutureListener<Channel> {
 
@@ -37,12 +40,12 @@ public class RequestSender implements FutureListener<Channel> {
         }
 
         DefaultFullHttpRequest request;
-        if (requestData.getMethod().equals(HttpMethod.PUT)) {
+        if (requestData.getOperation().equals(Operation.PUT)) {
             request = new DefaultFullHttpRequest(
-                    HttpVersion.HTTP_1_1, requestData.getMethod(), requestData.getUrl(), requestData.getBody());
+                    HttpVersion.HTTP_1_1, requestData.getOperation().getHttpMethod(), requestData.getUrl(), requestData.getBody());
         } else {
             request = new DefaultFullHttpRequest(
-                    HttpVersion.HTTP_1_1, requestData.getMethod(), requestData.getUrl());
+                    HttpVersion.HTTP_1_1, requestData.getOperation().getHttpMethod(), requestData.getUrl());
         }
 
         request.headers().set(HttpHeaderNames.HOST, requestData.getBucketName() + ".s3.amazonaws.com");
@@ -52,8 +55,8 @@ public class RequestSender implements FutureListener<Channel> {
         request.headers().set(HttpHeaderNames.CONTENT_LENGTH, requestData.getContentLength());
         request.headers().set(HttpHeaderNames.CONTENT_MD5, requestData.getMd5());
 
-        requestData.getSignatureCalculator().calculateAndAddSignature(request.headers(),
-                requestData.getUrl(), requestData.getMd5(), requestData.getContentType(), requestData.getBucketName());
+        requestData.getSignatureCalculatorFactory().getSignatureCalculator()
+                .calculateAndAddSignature(request.headers(), requestData);
 
         channel.writeAndFlush(request);
     }

@@ -1,8 +1,9 @@
 package pl.codewise.amazon.client.auth;
 
 import io.netty.handler.codec.http.HttpHeaders;
+import pl.codewise.amazon.client.http.Request;
 
 public interface SignatureCalculator {
 
-    void calculateAndAddSignature(HttpHeaders httpHeaders, String objectName, String contentMd5, String contentType, String virtualHost);
+    void calculateAndAddSignature(HttpHeaders headers, Request requestData);
 }
