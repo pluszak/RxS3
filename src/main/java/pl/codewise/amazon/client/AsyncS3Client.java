@@ -84,7 +84,7 @@ public class AsyncS3Client implements Closeable {
         urlBuilder.append("/?");
         appendQueryString(urlBuilder, prefix, null, null, null);
 
-        Request request = httpClient.prepareGet(urlBuilder.toString())
+        Request request = httpClient.prepareList(urlBuilder.toString())
                 .setBucketName(bucketName)
                 .setSignatureCalculatorFactory(signatureCalculatorFactory)
                 .build();
