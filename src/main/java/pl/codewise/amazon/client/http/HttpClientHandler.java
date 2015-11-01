@@ -1,5 +1,6 @@
 package pl.codewise.amazon.client.http;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -16,7 +17,7 @@ public class HttpClientHandler extends SimpleChannelInboundHandler<HttpObject> {
     public static final AttributeKey<SubscriptionCompletionHandler> HANDLER_ATTRIBUTE_KEY = AttributeKey.valueOf("handler");
 
     private final ChannelPool channelPool;
-    private final CompositeByteBuf result = Unpooled.compositeBuffer(1024);
+    private final ByteBuf result = Unpooled.buffer();
 
     private HttpResponseStatus status;
     private boolean keepAlive;
@@ -36,9 +37,7 @@ public class HttpClientHandler extends SimpleChannelInboundHandler<HttpObject> {
         if (msg instanceof HttpContent) {
             HttpContent content = (HttpContent) msg;
 
-            content.retain();
-            result.addComponent(content.content());
-            result.writerIndex(result.writerIndex() + content.content().readableBytes());
+            result.writeBytes(content.content());
 
             if (content instanceof LastHttpContent) {
                 Attribute<SubscriptionCompletionHandler> handlerAttribute = ctx.attr(HANDLER_ATTRIBUTE_KEY);
