@@ -22,12 +22,14 @@ public class NettyHttpClient implements AutoCloseable {
     private final EventLoopGroup group;
     private final ChannelPool channelPool;
 
+    private final String s3Location;
+
     public NettyHttpClient(ClientConfiguration configuration) {
         group = new NioEventLoopGroup();
 
         String[] s3LocationArray = configuration.getS3Location().trim().split(":");
 
-        String s3Location = s3LocationArray[0];
+        s3Location = s3LocationArray[0];
         int port = 80;
         if (s3LocationArray.length == 2) {
             port = Integer.parseInt(s3LocationArray[1]);
@@ -70,7 +72,7 @@ public class NettyHttpClient implements AutoCloseable {
 
     public <T> void executeRequest(Request requestData, SubscriptionCompletionHandler<T> completionHandler) {
         Future<Channel> acquire = channelPool.acquire();
-        acquire.addListener(new RequestSender(requestData, completionHandler));
+        acquire.addListener(new RequestSender(s3Location, requestData, completionHandler));
     }
 
     @Override

@@ -16,10 +16,12 @@ public class RequestSender implements FutureListener<Channel> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyHttpClient.class);
 
+    private final String s3Location;
     private final Request requestData;
     private final SubscriptionCompletionHandler completionHandler;
 
-    public RequestSender(Request requestData, SubscriptionCompletionHandler completionHandler) {
+    public RequestSender(String s3Location, Request requestData, SubscriptionCompletionHandler completionHandler) {
+        this.s3Location = s3Location;
         this.requestData = requestData;
         this.completionHandler = completionHandler;
     }
@@ -48,7 +50,7 @@ public class RequestSender implements FutureListener<Channel> {
                     HttpVersion.HTTP_1_1, requestData.getOperation().getHttpMethod(), requestData.getUrl());
         }
 
-        request.headers().set(HttpHeaderNames.HOST, requestData.getBucketName() + ".s3.amazonaws.com");
+        request.headers().set(HttpHeaderNames.HOST, requestData.getBucketName() + "." + s3Location);
         request.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
 
         request.headers().set(HttpHeaderNames.CONTENT_TYPE, requestData.getContentType());
