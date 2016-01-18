@@ -176,8 +176,9 @@ public class AsyncS3ClientTest {
             } else {
                 client.listNextBatchOfObjects(objectListing).subscribe(inProgressSubject::onNext);
             }
-        });
-        listing.subscribe(inProgressSubject::onNext);
+        }, completedSubject::onError, completedSubject::onCompleted);
+
+        listing.subscribe(inProgressSubject);
 
         assertThat(completedSubject)
                 .ignoreFields(fieldsToIgnore)
