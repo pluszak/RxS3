@@ -15,6 +15,7 @@ import org.xmlpull.v1.XmlPullParserFactory;
 import pl.codewise.amazon.client.auth.AWSSignatureCalculatorFactory;
 import pl.codewise.amazon.client.http.NettyHttpClient;
 import pl.codewise.amazon.client.http.Request;
+import pl.codewise.amazon.client.utils.TextBuilders;
 import pl.codewise.amazon.client.utils.UTF8UrlEncoder;
 import pl.codewise.amazon.client.xml.*;
 import rx.Observable;
@@ -80,7 +81,7 @@ public class AsyncS3Client implements Closeable {
     }
 
     public void listObjects(String bucketName, String prefix, Subscriber<? super ObjectListing> subscriber) {
-        TextBuilder urlBuilder = new TextBuilder();
+        TextBuilder urlBuilder = TextBuilders.threadLocal();
         urlBuilder.append("/?");
         appendQueryString(urlBuilder, prefix, null, null, null);
 
@@ -93,16 +94,7 @@ public class AsyncS3Client implements Closeable {
     }
 
     public Observable<ObjectListing> listObjects(String bucketName, String prefix) {
-        TextBuilder urlBuilder = new TextBuilder();
-        urlBuilder.append("/?");
-        appendQueryString(urlBuilder, prefix, null, null, null);
-
-        Request request = httpClient.prepareList(urlBuilder.toString())
-                .setBucketName(bucketName)
-                .setSignatureCalculatorFactory(signatureCalculatorFactory)
-                .build();
-
-        return retrieveResult(request, listResponseParser);
+        return Observable.create(subscriber -> listObjects(bucketName, prefix, subscriber));
     }
 
     public void listNextBatchOfObjects(ObjectListing objectListing, Subscriber<ObjectListing> observable) {
@@ -148,8 +140,8 @@ public class AsyncS3Client implements Closeable {
                 objectListing.getMaxKeys()));
     }
 
-    public void listObjects(ListObjectsRequest listObjectsRequest, Subscriber<ObjectListing> observer) {
-        TextBuilder urlBuilder = new TextBuilder();
+    public void listObjects(ListObjectsRequest listObjectsRequest, Subscriber<? super ObjectListing> observer) {
+        TextBuilder urlBuilder = TextBuilders.threadLocal();
         urlBuilder.append("/?");
         appendQueryString(urlBuilder, listObjectsRequest);
 
@@ -162,20 +154,11 @@ public class AsyncS3Client implements Closeable {
     }
 
     public Observable<ObjectListing> listObjects(ListObjectsRequest listObjectsRequest) {
-        TextBuilder urlBuilder = new TextBuilder();
-        urlBuilder.append("/?");
-        appendQueryString(urlBuilder, listObjectsRequest);
-
-        Request request = httpClient.prepareList(urlBuilder.toString())
-                .setBucketName(listObjectsRequest.getBucketName())
-                .setSignatureCalculatorFactory(signatureCalculatorFactory)
-                .build();
-
-        return retrieveResult(request, listResponseParser);
+        return Observable.create(subscriber -> listObjects(listObjectsRequest, subscriber));
     }
 
     public Observable<InputStream> getObject(String bucketName, String location) throws IOException {
-        TextBuilder urlBuilder = new TextBuilder();
+        TextBuilder urlBuilder = TextBuilders.threadLocal();
         urlBuilder.append("/");
         UTF8UrlEncoder.appendEncoded(urlBuilder, location);
 
@@ -188,7 +171,7 @@ public class AsyncS3Client implements Closeable {
     }
 
     public Observable<?> deleteObject(String bucketName, String location) throws IOException {
-        TextBuilder urlBuilder = new TextBuilder();
+        TextBuilder urlBuilder = TextBuilders.threadLocal();
         urlBuilder.append("/");
         UTF8UrlEncoder.appendEncoded(urlBuilder, location);
 
@@ -210,8 +193,6 @@ public class AsyncS3Client implements Closeable {
     }
 
     private <T> Observable<T> retrieveResult(Request request, GenericResponseParser<T> responseParser) {
-        return Observable.create((Subscriber<? super T> subscriber) ->
-                        httpClient.executeRequest(request, new SubscriptionCompletionHandler<>(subscriber, responseParser, errorResponseParser))
-        );
+        return Observable.create(subscriber -> retrieveResult(request, responseParser, subscriber));
     }
 }
