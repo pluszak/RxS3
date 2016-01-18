@@ -3,6 +3,7 @@ package pl.codewise.amazon.client.http;
 import java.lang.reflect.Field;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -37,6 +38,7 @@ public class NettyHttpClient implements AutoCloseable {
 
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(group)
+                .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
                 .option(ChannelOption.SO_KEEPALIVE, true)
                 .option(ChannelOption.TCP_NODELAY, true)
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, configuration.getConnectionTimeoutMillis())
