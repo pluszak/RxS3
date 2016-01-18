@@ -12,6 +12,7 @@ import pl.codewise.amazon.client.xml.ErrorResponseParser;
 import pl.codewise.amazon.client.xml.GenericResponseParser;
 import rx.Observer;
 import rx.Subscriber;
+import rx.exceptions.OnErrorNotImplementedException;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -57,7 +58,6 @@ public class SubscriptionCompletionHandler<T> implements Observer<Pair<HttpRespo
 
     @Override
     public void onCompleted() {
-
     }
 
     @Override
@@ -67,13 +67,19 @@ public class SubscriptionCompletionHandler<T> implements Observer<Pair<HttpRespo
     }
 
     private boolean emitExceptionIfUnsuccessful(HttpResponseStatus status, ByteBuf content, Observer<?> observer) {
-        if (!status.equals(HttpResponseStatus.OK) && !status.equals(HttpResponseStatus.NO_CONTENT)) {
-            try {
-                observer.onError(errorResponseParser.parse(status, content).get().build());
-            } catch (IOException e) {
-                observer.onError(e);
-            }
+        try {
+            if (!status.equals(HttpResponseStatus.OK) && !status.equals(HttpResponseStatus.NO_CONTENT)) {
+                try {
+                    observer.onError(errorResponseParser.parse(status, content).get().build());
+                } catch (IOException e) {
+                    observer.onError(new RuntimeException("Received unparseable error with code: " + status));
+                }
 
+                return true;
+            }
+        } catch (OnErrorNotImplementedException e) {
+            LOGGER.error("Error processing response (and onError not implemented)", e);
+            observer.onCompleted();
             return true;
         }
 

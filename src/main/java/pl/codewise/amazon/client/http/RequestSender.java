@@ -2,8 +2,7 @@ package pl.codewise.amazon.client.http;
 
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -50,12 +49,12 @@ public class RequestSender implements FutureListener<Channel> {
                     HttpVersion.HTTP_1_1, requestData.getOperation().getHttpMethod(), requestData.getUrl());
         }
 
-        request.headers().set(HttpHeaderNames.HOST, requestData.getBucketName() + "." + s3Location);
-        request.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
+        request.headers().set(HttpHeaders.Names.HOST, requestData.getBucketName() + "." + s3Location);
+        request.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
 
-        request.headers().set(HttpHeaderNames.CONTENT_TYPE, requestData.getContentType());
-        request.headers().set(HttpHeaderNames.CONTENT_LENGTH, requestData.getContentLength());
-        request.headers().set(HttpHeaderNames.CONTENT_MD5, requestData.getMd5());
+        request.headers().set(HttpHeaders.Names.CONTENT_TYPE, requestData.getContentType());
+        request.headers().set(HttpHeaders.Names.CONTENT_LENGTH, requestData.getContentLength());
+        request.headers().set(HttpHeaders.Names.CONTENT_MD5, requestData.getMd5());
 
         requestData.getSignatureCalculatorFactory().getSignatureCalculator()
                 .calculateAndAddSignature(request.headers(), requestData);

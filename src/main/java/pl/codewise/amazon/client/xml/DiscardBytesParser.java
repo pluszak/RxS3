@@ -5,21 +5,23 @@ import java.util.Optional;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.ReferenceCountUtil;
 
 public class DiscardBytesParser extends GenericResponseParser<Object> {
 
-	private static final DiscardBytesParser INSTANCE = new DiscardBytesParser();
+    private static final DiscardBytesParser INSTANCE = new DiscardBytesParser();
 
-	public static DiscardBytesParser getInstance() {
-		return INSTANCE;
-	}
+    public static DiscardBytesParser getInstance() {
+        return INSTANCE;
+    }
 
-	public DiscardBytesParser() {
-		super(null, null);
-	}
+    public DiscardBytesParser() {
+        super(null, null);
+    }
 
-	@Override
-	public Optional<Object> parse(HttpResponseStatus status, ByteBuf content) throws IOException {
-		return Optional.empty();
-	}
+    @Override
+    public Optional<Object> parse(HttpResponseStatus status, ByteBuf content) throws IOException {
+        ReferenceCountUtil.release(content);
+        return Optional.empty();
+    }
 }

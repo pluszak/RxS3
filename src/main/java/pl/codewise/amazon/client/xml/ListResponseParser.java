@@ -10,6 +10,7 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.ReferenceCountUtil;
 import org.xmlpull.v1.XmlPullParserFactory;
 import pl.codewise.amazon.client.ClientConfiguration;
 import pl.codewise.amazon.client.xml.handlers.ListObjectsTagHandler;
@@ -32,6 +33,7 @@ public class ListResponseParser extends GenericResponseParser<ObjectListing> {
             listing.setNextMarker(null);
         }
 
+        ReferenceCountUtil.release(content);
         return Optional.of(listing);
     }
 

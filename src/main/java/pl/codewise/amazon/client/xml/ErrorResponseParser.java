@@ -1,11 +1,13 @@
 package pl.codewise.amazon.client.xml;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.Optional;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xmlpull.v1.XmlPullParserFactory;
@@ -23,13 +25,16 @@ public class ErrorResponseParser extends GenericResponseParser<AmazonS3Exception
         AmazonS3ExceptionBuilder exceptionBuilder = new AmazonS3ExceptionBuilder();
         exceptionBuilder.setStatusCode(status.code());
 
-        LOGGER.error("Error content body:\n{}", content);
+        LOGGER.error("Error content body:\n{}", content.toString(Charset.defaultCharset()));
         parse(new ByteBufInputStream(content), exceptionBuilder);
 
         return exceptionBuilder;
     }
 
     public Optional<AmazonS3ExceptionBuilder> parse(HttpResponseStatus status, ByteBuf content) throws IOException {
-        return Optional.of(parseResponse(status, content));
+        AmazonS3ExceptionBuilder response = parseResponse(status, content);
+        ReferenceCountUtil.release(content);
+        
+        return Optional.of(response);
     }
 }
