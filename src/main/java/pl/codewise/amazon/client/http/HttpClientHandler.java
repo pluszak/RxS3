@@ -22,8 +22,8 @@ public class HttpClientHandler extends SimpleChannelInboundHandler<HttpObject> {
 
     private final ChannelPool channelPool;
 
-    private HttpResponseStatus status;
-    private boolean keepAlive;
+    private volatile HttpResponseStatus status;
+    private volatile boolean keepAlive;
 
     public HttpClientHandler(ChannelPool channelPool) {
         this.channelPool = channelPool;
@@ -38,10 +38,6 @@ public class HttpClientHandler extends SimpleChannelInboundHandler<HttpObject> {
             HttpResponse response = (HttpResponse) msg;
             keepAlive = HttpHeaders.isKeepAlive(response);
             status = response.getStatus();
-
-            if (result != null && result.refCnt() == 1) {
-                ReferenceCountUtil.release(result);
-            }
 
             result = ctx.alloc().buffer();
             bufferAttribute.set(result);
@@ -69,6 +65,13 @@ public class HttpClientHandler extends SimpleChannelInboundHandler<HttpObject> {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        Attribute<ByteBuf> bufferAttribute = ctx.channel().attr(BUFFER_ATTRIBUTE_KEY);
+        ByteBuf result = bufferAttribute.get();
+
+        if (result != null) {
+            ReferenceCountUtil.release(result);
+        }
+
         Attribute<SubscriptionCompletionHandler> handlerAttribute = ctx.channel().attr(HANDLER_ATTRIBUTE_KEY);
         SubscriptionCompletionHandler handler = handlerAttribute.getAndRemove();
 
