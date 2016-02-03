@@ -53,7 +53,8 @@ public class NettyHttpClient implements AutoCloseable {
             public void channelCreated(Channel ch) {
                 initializer.initChannel(channelPool, ch);
             }
-        }, ChannelHealthChecker.ACTIVE, FixedChannelPool.AcquireTimeoutAction.FAIL, 0, configuration.getMaxConnections(), 1);
+        }, ChannelHealthChecker.ACTIVE, FixedChannelPool.AcquireTimeoutAction.FAIL,
+                configuration.getAcquireTimeoutMillis(), configuration.getMaxConnections(), configuration.getMaxPendingAcquires());
     }
 
     public Request prepareGet(String url) {

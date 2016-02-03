@@ -9,7 +9,10 @@ public class ClientConfiguration {
 
     private final int connectionTimeoutMillis;
     private final int requestTimeoutMillis;
+
     private final int maxConnections;
+    private final int maxPendingAcquires;
+    private final int acquireTimeoutMillis;
 
     private final boolean skipParsingOwner;
     private final boolean skipParsingETag;
@@ -17,14 +20,18 @@ public class ClientConfiguration {
     private final boolean skipParsingStorageClass;
 
     public ClientConfiguration(AWSCredentialsProvider credentialsProvider, String s3Location,
-                               int connectionTimeoutMillis, int requestTimeoutMillis, int maxConnections,
+                               int connectionTimeoutMillis, int requestTimeoutMillis,
+                               int maxConnections, int maxPendingAcquires, int acquireTimeoutMillis,
                                boolean skipParsingOwner, boolean skipParsingETag, boolean skipParsingLastModified, boolean skipParsingStorageClass) {
         this.credentialsProvider = credentialsProvider;
         this.s3Location = s3Location;
 
         this.connectionTimeoutMillis = connectionTimeoutMillis;
         this.requestTimeoutMillis = requestTimeoutMillis;
+
         this.maxConnections = maxConnections;
+        this.maxPendingAcquires = maxPendingAcquires;
+        this.acquireTimeoutMillis = acquireTimeoutMillis;
 
         this.skipParsingOwner = skipParsingOwner;
         this.skipParsingETag = skipParsingETag;
@@ -50,6 +57,14 @@ public class ClientConfiguration {
 
     public int getMaxConnections() {
         return maxConnections;
+    }
+
+    public int getMaxPendingAcquires() {
+        return maxPendingAcquires;
+    }
+
+    public int getAcquireTimeoutMillis() {
+        return acquireTimeoutMillis;
     }
 
     public boolean isSkipParsingOwner() {
