@@ -16,6 +16,8 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import com.googlecode.catchexception.CatchException;
+import com.jayway.awaitility.Awaitility;
+import com.jayway.awaitility.Duration;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
@@ -111,12 +113,16 @@ public class AsyncS3ClientTest {
 
     @BeforeMethod
     public void beforeTest() {
-        assertThat(client.acquiredConnections()).isEqualTo(0);
+        Awaitility.await().atMost(Duration.TEN_SECONDS).until(() ->
+                assertThat(client.acquiredConnections()).isEqualTo(0)
+        );
     }
 
     @AfterMethod
     public void afterTest() {
-        assertThat(client.acquiredConnections()).isEqualTo(0);
+        Awaitility.await().atMost(Duration.TEN_SECONDS).until(() ->
+                assertThat(client.acquiredConnections()).isEqualTo(0)
+        );
     }
 
     @Test
