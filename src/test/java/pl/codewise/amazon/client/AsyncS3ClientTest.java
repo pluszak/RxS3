@@ -113,15 +113,19 @@ public class AsyncS3ClientTest {
 
     @BeforeMethod
     public void beforeTest() {
-        Awaitility.await().atMost(Duration.TEN_SECONDS).until(() ->
-                assertThat(client.acquiredConnections()).isEqualTo(0)
+        Awaitility.await().atMost(Duration.TEN_SECONDS).until(() -> {
+                    LOGGER.info("Acquired connections {}", client.acquiredConnections());
+                    assertThat(client.acquiredConnections()).isEqualTo(0);
+                }
         );
     }
 
     @AfterMethod
     public void afterTest() {
-        Awaitility.await().atMost(Duration.TEN_SECONDS).until(() ->
-                assertThat(client.acquiredConnections()).isEqualTo(0)
+        Awaitility.await().atMost(Duration.TEN_SECONDS).until(() -> {
+                    LOGGER.info("Acquired connections {}", client.acquiredConnections());
+                    assertThat(client.acquiredConnections()).isEqualTo(0);
+                }
         );
     }
 
