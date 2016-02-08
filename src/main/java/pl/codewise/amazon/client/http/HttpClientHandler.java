@@ -75,9 +75,9 @@ public class HttpClientHandler extends SimpleChannelInboundHandler<HttpObject> {
         Attribute<SubscriptionCompletionHandler> handlerAttribute = ctx.channel().attr(HANDLER_ATTRIBUTE_KEY);
         SubscriptionCompletionHandler handler = handlerAttribute.getAndRemove();
 
+        channelPool.release(ctx.channel());
         if (handler == null) {
             LOGGER.warn("Exception caught but handler is null", cause);
-            channelPool.release(ctx.channel());
         } else {
             handler.onError(cause);
         }
