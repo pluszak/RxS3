@@ -86,6 +86,7 @@ public class NettyHttpClient implements AutoCloseable {
     @Override
     public void close() {
         try {
+            channelPool.close();
             group.shutdownGracefully().sync();
         } catch (InterruptedException e) {
             // ignore
