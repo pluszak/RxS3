@@ -10,6 +10,8 @@ public class ClientConfiguration {
     private final int connectionTimeoutMillis;
     private final int requestTimeoutMillis;
 
+    private final int workerThreadCount;
+
     private final int maxConnections;
     private final int maxPendingAcquires;
     private final int acquireTimeoutMillis;
@@ -20,7 +22,7 @@ public class ClientConfiguration {
     private final boolean skipParsingStorageClass;
 
     public ClientConfiguration(AWSCredentialsProvider credentialsProvider, String s3Location,
-                               int connectionTimeoutMillis, int requestTimeoutMillis,
+                               int connectionTimeoutMillis, int requestTimeoutMillis, int workerThreadCount,
                                int maxConnections, int maxPendingAcquires, int acquireTimeoutMillis,
                                boolean skipParsingOwner, boolean skipParsingETag, boolean skipParsingLastModified, boolean skipParsingStorageClass) {
         this.credentialsProvider = credentialsProvider;
@@ -28,6 +30,7 @@ public class ClientConfiguration {
 
         this.connectionTimeoutMillis = connectionTimeoutMillis;
         this.requestTimeoutMillis = requestTimeoutMillis;
+        this.workerThreadCount = workerThreadCount;
 
         this.maxConnections = maxConnections;
         this.maxPendingAcquires = maxPendingAcquires;
@@ -53,6 +56,10 @@ public class ClientConfiguration {
 
     public int getRequestTimeoutMillis() {
         return requestTimeoutMillis;
+    }
+
+    public int getWorkerThreadCount() {
+        return workerThreadCount;
     }
 
     public int getMaxConnections() {

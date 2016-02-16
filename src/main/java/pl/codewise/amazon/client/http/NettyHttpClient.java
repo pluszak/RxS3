@@ -28,10 +28,10 @@ public class NettyHttpClient implements AutoCloseable {
     private final String s3Location;
 
     public NettyHttpClient(ClientConfiguration configuration) {
-        ThreadGroup threadGroup = new ThreadGroup("Netty RXS3 client");
+        ThreadGroup threadGroup = new ThreadGroup("Netty RxS3 client");
         AtomicInteger threadCounter = new AtomicInteger();
-        ThreadFactory threadFactory = r ->  new Thread(threadGroup, r, "Netty RXS3 client worker thread " + threadCounter.getAndIncrement());
-        group = new NioEventLoopGroup(0, threadFactory);
+        ThreadFactory threadFactory = r ->  new Thread(threadGroup, r, "RxS3-client-worker" + threadCounter.getAndIncrement());
+        group = new NioEventLoopGroup(configuration.getWorkerThreadCount(), threadFactory);
 
         String[] s3LocationArray = configuration.getS3Location().trim().split(":");
 
