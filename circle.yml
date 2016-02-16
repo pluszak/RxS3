@@ -13,6 +13,9 @@ dependencies:
           fake-s3/
         background: true
 
+general:
+  artifacts:
+    - "build/reports/tests/index.html"
 
 deployment:
   production:
