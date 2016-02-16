@@ -21,7 +21,7 @@ public class ErrorResponseParser extends GenericResponseParser<AmazonS3Exception
         super(pullParserFactory, ErrorTagHandler.UNKNOWN, ErrorTagHandler.values());
     }
 
-    public AmazonS3ExceptionBuilder parseResponse(HttpResponseStatus status, ByteBuf content) throws IOException {
+    private AmazonS3ExceptionBuilder parseResponse(HttpResponseStatus status, ByteBuf content) throws IOException {
         AmazonS3ExceptionBuilder exceptionBuilder = new AmazonS3ExceptionBuilder();
         exceptionBuilder.setStatusCode(status.code());
 
