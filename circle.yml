@@ -15,7 +15,8 @@ dependencies:
 
 general:
   artifacts:
-    - "build/reports/tests/*"
+    - "build/reports/tests/index.html"
+    - "build/reports/tests/classes/pl.codewise.amazon.client.AsyncS3ClientTest.html"
 
 deployment:
   production:
