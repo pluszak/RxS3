@@ -15,7 +15,7 @@ dependencies:
 
 general:
   artifacts:
-    - "build/reports/tests/index.html"
+    - "build/reports/tests/*"
 
 deployment:
   production:
