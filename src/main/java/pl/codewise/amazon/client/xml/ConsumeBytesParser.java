@@ -22,6 +22,7 @@ public class ConsumeBytesParser extends GenericResponseParser<InputStream> {
 
     @Override
     public Optional<InputStream> parse(HttpResponseStatus status, ByteBuf content) throws IOException {
+        //TODO looks like leak here, I think we should return ByteBuf to release later or copy content and release here
         return Optional.of(new ByteBufInputStream(content));
     }
 }

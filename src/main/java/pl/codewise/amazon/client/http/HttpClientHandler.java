@@ -1,85 +1,61 @@
 package pl.codewise.amazon.client.http;
 
-import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.codec.http.*;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
-import io.netty.util.ReferenceCountUtil;
-import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.codewise.amazon.client.SubscriptionCompletionHandler;
 
-public class HttpClientHandler extends SimpleChannelInboundHandler<HttpObject> {
+public class HttpClientHandler extends SimpleChannelInboundHandler<FullHttpResponse> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpClientHandler.class);
 
-    public static final AttributeKey<SubscriptionCompletionHandler> HANDLER_ATTRIBUTE_KEY = AttributeKey.valueOf("handler");
-    public static final AttributeKey<ByteBuf> BUFFER_ATTRIBUTE_KEY = AttributeKey.valueOf("buffer");
-
     private final ChannelPool channelPool;
+    private final SubscriptionCompletionHandler completionHandler;
+    private boolean isKeepAlive;
+    private boolean handlerNotified;
 
-    private volatile HttpResponseStatus status;
-    private volatile boolean keepAlive;
-
-    public HttpClientHandler(ChannelPool channelPool) {
+    public HttpClientHandler(ChannelPool channelPool, SubscriptionCompletionHandler completionHandler) {
+        super(false);
         this.channelPool = channelPool;
+        this.completionHandler = completionHandler;
     }
 
     @Override
-    public void channelRead0(ChannelHandlerContext ctx, HttpObject msg) {
-        Attribute<ByteBuf> bufferAttribute = ctx.channel().attr(BUFFER_ATTRIBUTE_KEY);
-        ByteBuf result = bufferAttribute.get();
-
-        if (msg instanceof HttpResponse) {
-            HttpResponse response = (HttpResponse) msg;
-            keepAlive = HttpHeaders.isKeepAlive(response);
-            status = response.getStatus();
-
-            result = ctx.alloc().buffer();
-            bufferAttribute.set(result);
+    public void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) {
+        handlerNotified = true;
+        if (!(isKeepAlive = HttpUtil.isKeepAlive(msg))) {
+            ctx.close();
+        } else {
+            ctx.pipeline().remove(this);
+            channelPool.release(ctx.channel());
         }
-
-        if (msg instanceof HttpContent) {
-            HttpContent content = (HttpContent) msg;
-
-            result.writeBytes(content.content());
-            if (content instanceof LastHttpContent) {
-                Attribute<SubscriptionCompletionHandler> handlerAttribute = ctx.channel().attr(HANDLER_ATTRIBUTE_KEY);
-                SubscriptionCompletionHandler handler = handlerAttribute.getAndRemove();
-
-                if (!keepAlive) {
-                    ctx.close();
-                }
-
-                channelPool.release(ctx.channel());
-
-                handler.onNext(Pair.of(status, result));
-                handler.onCompleted();
-            }
-        }
+        completionHandler.onNext(msg);
+        completionHandler.onCompleted();
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        Attribute<ByteBuf> bufferAttribute = ctx.channel().attr(BUFFER_ATTRIBUTE_KEY);
-        ByteBuf result = bufferAttribute.get();
-
-        if (result != null) {
-            ReferenceCountUtil.release(result);
-        }
-
-        Attribute<SubscriptionCompletionHandler> handlerAttribute = ctx.channel().attr(HANDLER_ATTRIBUTE_KEY);
-        SubscriptionCompletionHandler handler = handlerAttribute.getAndRemove();
-
-        channelPool.release(ctx.channel());
-        if (handler == null) {
-            LOGGER.warn("Exception caught but handler is null", cause);
+        handlerNotified = true;
+        LOGGER.error("Exception during request", cause);
+        ctx.pipeline().remove(this);
+        if (!isKeepAlive) {
+            ctx.close();
         } else {
-            handler.onError(cause);
+            channelPool.release(ctx.channel());
+        }
+        completionHandler.onError(cause);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        super.channelInactive(ctx);
+        if (!handlerNotified) {
+            handlerNotified = true;
+            completionHandler.onError(new ChannelException("Channel become inactive"));
         }
     }
 }

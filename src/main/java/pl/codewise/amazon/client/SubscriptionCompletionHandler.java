@@ -5,8 +5,8 @@ import java.nio.charset.Charset;
 import java.util.Optional;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import pl.codewise.amazon.client.xml.ErrorResponseParser;
 import pl.codewise.amazon.client.xml.GenericResponseParser;
@@ -16,7 +16,7 @@ import rx.exceptions.OnErrorNotImplementedException;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
-public class SubscriptionCompletionHandler<T> implements Observer<Pair<HttpResponseStatus, ByteBuf>> {
+public class SubscriptionCompletionHandler<T> implements Observer<FullHttpResponse> {
 
     private static final Logger LOGGER = getLogger(SubscriptionCompletionHandler.class);
 
@@ -33,18 +33,18 @@ public class SubscriptionCompletionHandler<T> implements Observer<Pair<HttpRespo
     }
 
     @Override
-    public void onNext(Pair<HttpResponseStatus, ByteBuf> response) {
+    public void onNext(FullHttpResponse response) {
         if (LOGGER.isTraceEnabled()) {
-            LOGGER.trace("Amazon response '{}'", response.getRight().toString(Charset.defaultCharset()));
+            LOGGER.trace("Amazon response '{}'", response.content().toString(Charset.defaultCharset()));
         }
 
         if (subscriber.isUnsubscribed()) {
             return;
         }
 
-        if (!emitExceptionIfUnsuccessful(response.getKey(), response.getValue(), subscriber)) {
+        if (!emitExceptionIfUnsuccessful(response.status(), response.content(), subscriber)) {
             try {
-                Optional<T> result = responseParser.parse(response.getKey(), response.getValue());
+                Optional<T> result = responseParser.parse(response.status(), response.content());
                 if (result.isPresent()) {
                     subscriber.onNext(result.get());
                 }
