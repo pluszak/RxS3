@@ -31,8 +31,8 @@ public class HttpClientHandler extends SimpleChannelInboundHandler<FullHttpRespo
             ctx.close();
         } else {
             ctx.pipeline().remove(this);
-            channelPool.release(ctx.channel());
         }
+        channelPool.release(ctx.channel());
         completionHandler.onNext(msg);
         completionHandler.onCompleted();
     }
@@ -44,9 +44,8 @@ public class HttpClientHandler extends SimpleChannelInboundHandler<FullHttpRespo
         ctx.pipeline().remove(this);
         if (!isKeepAlive) {
             ctx.close();
-        } else {
-            channelPool.release(ctx.channel());
         }
+        channelPool.release(ctx.channel());
         completionHandler.onError(cause);
     }
 
