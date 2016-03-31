@@ -1,10 +1,15 @@
 package pl.codewise.amazon.client.http;
 
+import java.io.IOException;
+
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.codec.http.*;
+import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.Promise;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.codewise.amazon.client.SubscriptionCompletionHandler;
@@ -27,11 +32,13 @@ public class HttpClientHandler extends SimpleChannelInboundHandler<FullHttpRespo
     @Override
     public void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) {
         handlerNotified = true;
+
         if (!(isKeepAlive = HttpUtil.isKeepAlive(msg))) {
             ctx.close();
         } else {
             ctx.pipeline().remove(this);
         }
+
         channelPool.release(ctx.channel());
         completionHandler.onNext(msg);
         completionHandler.onCompleted();
@@ -45,6 +52,7 @@ public class HttpClientHandler extends SimpleChannelInboundHandler<FullHttpRespo
         if (!isKeepAlive) {
             ctx.close();
         }
+
         channelPool.release(ctx.channel());
         completionHandler.onError(cause);
     }
@@ -52,9 +60,11 @@ public class HttpClientHandler extends SimpleChannelInboundHandler<FullHttpRespo
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         super.channelInactive(ctx);
+
         if (!handlerNotified) {
             handlerNotified = true;
-            completionHandler.onError(new ChannelException("Channel become inactive"));
+            channelPool.release(ctx.channel());
+            completionHandler.onError(new IOException("Channel become inactive"));
         }
     }
 }
