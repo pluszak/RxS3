@@ -62,7 +62,7 @@ public class SubscriptionCompletionHandler<T> implements Observer<FullHttpRespon
 
     @Override
     public void onError(Throwable t) {
-        LOGGER.error("Error while processing S3 request", t);
+        LOGGER.debug("Error while processing S3 request", t);
         subscriber.onError(t);
     }
 

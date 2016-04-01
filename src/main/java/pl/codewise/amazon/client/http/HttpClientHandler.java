@@ -47,7 +47,8 @@ public class HttpClientHandler extends SimpleChannelInboundHandler<FullHttpRespo
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         handlerNotified = true;
-        LOGGER.error("Exception during request", cause);
+        LOGGER.debug("Exception during request", cause);
+
         ctx.pipeline().remove(this);
         if (!isKeepAlive) {
             ctx.close();
