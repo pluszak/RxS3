@@ -25,16 +25,18 @@ public class ErrorResponseParser extends GenericResponseParser<AmazonS3Exception
         AmazonS3ExceptionBuilder exceptionBuilder = new AmazonS3ExceptionBuilder();
         exceptionBuilder.setStatusCode(status.code());
 
-        LOGGER.error("Error content body:\n{}", content.toString(Charset.defaultCharset()));
-        parse(new ByteBufInputStream(content), exceptionBuilder);
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Error content body:\n{}", content.toString(Charset.defaultCharset()));
+        }
 
+        parse(new ByteBufInputStream(content), exceptionBuilder);
         return exceptionBuilder;
     }
 
     public Optional<AmazonS3ExceptionBuilder> parse(HttpResponseStatus status, ByteBuf content) throws IOException {
         AmazonS3ExceptionBuilder response = parseResponse(status, content);
         ReferenceCountUtil.release(content);
-        
+
         return Optional.of(response);
     }
 }
