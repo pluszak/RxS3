@@ -1,7 +1,6 @@
 package pl.codewise.amazon.client;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.io.InputStream;
 
 import com.amazonaws.services.s3.model.ListObjectsRequest;
@@ -59,7 +58,7 @@ public class AsyncS3Client implements Closeable {
         return httpClient.acquiredConnections();
     }
 
-    public Observable<InputStream> putObject(String bucketName, String key, byte[] data, ObjectMetadata metadata) throws IOException {
+    public Observable<InputStream> putObject(String bucketName, String key, byte[] data, ObjectMetadata metadata) {
         Request request = httpClient.preparePut("/" + key)
                 .setBucketName(bucketName)
                 .setSignatureCalculatorFactory(signatureCalculatorFactory)
@@ -157,7 +156,7 @@ public class AsyncS3Client implements Closeable {
         return Observable.create(subscriber -> listObjects(listObjectsRequest, subscriber));
     }
 
-    public Observable<InputStream> getObject(String bucketName, String location) throws IOException {
+    public Observable<InputStream> getObject(String bucketName, String location) {
         TextBuilder urlBuilder = TextBuilders.threadLocal();
         urlBuilder.append("/");
         UTF8UrlEncoder.appendEncoded(urlBuilder, location);
@@ -170,7 +169,7 @@ public class AsyncS3Client implements Closeable {
         return retrieveResult(request, ConsumeBytesParser.getInstance());
     }
 
-    public Observable<?> deleteObject(String bucketName, String location) throws IOException {
+    public Observable<?> deleteObject(String bucketName, String location) {
         TextBuilder urlBuilder = TextBuilders.threadLocal();
         urlBuilder.append("/");
         UTF8UrlEncoder.appendEncoded(urlBuilder, location);
