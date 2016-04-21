@@ -42,9 +42,9 @@ public class SubscriptionCompletionHandler<T> implements Observer<FullHttpRespon
             return;
         }
 
-        if (!emitExceptionIfUnsuccessful(response.status(), response.content(), subscriber)) {
+        if (!emitExceptionIfUnsuccessful(response.getStatus(), response.content(), subscriber)) {
             try {
-                Optional<T> result = responseParser.parse(response.status(), response.content());
+                Optional<T> result = responseParser.parse(response.getStatus(), response.content());
                 if (result.isPresent()) {
                     subscriber.onNext(result.get());
                 }

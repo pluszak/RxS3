@@ -2,14 +2,11 @@ package pl.codewise.amazon.client.http;
 
 import java.io.IOException;
 
-import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.pool.ChannelPool;
-import io.netty.handler.codec.http.*;
-import io.netty.util.concurrent.DefaultPromise;
-import io.netty.util.concurrent.Promise;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.codewise.amazon.client.SubscriptionCompletionHandler;
@@ -33,7 +30,7 @@ public class HttpClientHandler extends SimpleChannelInboundHandler<FullHttpRespo
     public void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) {
         handlerNotified = true;
 
-        if (!(isKeepAlive = HttpUtil.isKeepAlive(msg))) {
+        if (!(isKeepAlive = HttpHeaders.isKeepAlive(msg))) {
             ctx.close();
         } else {
             ctx.pipeline().remove(this);
