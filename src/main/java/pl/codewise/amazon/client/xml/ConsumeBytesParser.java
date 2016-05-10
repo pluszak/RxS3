@@ -7,6 +7,7 @@ import java.util.Optional;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.ReferenceCountUtil;
 
 public class ConsumeBytesParser extends GenericResponseParser<InputStream> {
 
@@ -22,7 +23,13 @@ public class ConsumeBytesParser extends GenericResponseParser<InputStream> {
 
     @Override
     public Optional<InputStream> parse(HttpResponseStatus status, ByteBuf content) throws IOException {
-        //TODO looks like leak here, I think we should return ByteBuf to release later or copy content and release here
-        return Optional.of(new ByteBufInputStream(content));
+        return Optional.of(new ByteBufInputStream(content) {
+
+            @Override
+            public void close() throws IOException {
+                super.close();
+                ReferenceCountUtil.release(content);
+            }
+        });
     }
 }
