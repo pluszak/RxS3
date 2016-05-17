@@ -33,7 +33,7 @@ compileJava {
 }
 
 dependencies {
-    compile('com.amazonaws:aws-java-sdk-s3:1.9.13') {
+    compile('com.amazonaws:aws-java-sdk-s3:1.10.54') {
         exclude group: 'log4j'
     }
 
