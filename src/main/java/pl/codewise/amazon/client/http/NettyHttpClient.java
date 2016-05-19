@@ -16,11 +16,15 @@ import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.FixedChannelPool;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.concurrent.Future;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import pl.codewise.amazon.client.ClientConfiguration;
 import pl.codewise.amazon.client.SubscriptionCompletionHandler;
 import pl.codewise.amazon.client.auth.Operation;
 
 public class NettyHttpClient implements AutoCloseable {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(NettyHttpClient.class);
 
     private final EventLoopGroup group;
     private final ChannelPool channelPool;
@@ -56,6 +60,7 @@ public class NettyHttpClient implements AutoCloseable {
 
             @Override
             public void channelCreated(Channel ch) {
+                LOGGER.debug("Channel was created");
                 initializer.initChannel(ch);
             }
         }, ChannelHealthChecker.ACTIVE, FixedChannelPool.AcquireTimeoutAction.FAIL,
