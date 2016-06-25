@@ -26,15 +26,18 @@ public class ListResponseParser extends GenericResponseParser<ObjectListing> {
     }
 
     public Optional<ObjectListing> parse(HttpResponseStatus status, ByteBuf content) throws IOException {
-        ObjectListing listing = new ObjectListing();
-        parse(new ByteBufInputStream(content), listing);
+        try {
+            ObjectListing listing = new ObjectListing();
+            parse(new ByteBufInputStream(content), listing);
 
-        if (!listing.isTruncated()) {
-            listing.setNextMarker(null);
+            if (!listing.isTruncated()) {
+                listing.setNextMarker(null);
+            }
+
+            return Optional.of(listing);
+        } finally {
+            ReferenceCountUtil.release(content);
         }
-
-        ReferenceCountUtil.release(content);
-        return Optional.of(listing);
     }
 
     public static ListResponseParser newListResponseParser(XmlPullParserFactory pullParserFactory, ClientConfiguration configuration) {
