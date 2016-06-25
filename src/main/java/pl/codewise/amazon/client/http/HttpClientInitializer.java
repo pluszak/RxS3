@@ -5,6 +5,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.timeout.IdleStateHandler;
 import pl.codewise.amazon.client.InactiveConnectionsHandler;
 
 public class HttpClientInitializer {
@@ -14,6 +15,7 @@ public class HttpClientInitializer {
 
     public void initChannel(Channel ch) {
         ChannelPipeline p = ch.pipeline();
+        p.addLast(new IdleStateHandler(0, 0, 60));
         p.addLast(new HttpClientCodec());
         p.addLast(new HttpContentDecompressor());
         p.addLast(new HttpObjectAggregator(MAX_REQUEST_SIZE));
