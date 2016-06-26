@@ -15,7 +15,6 @@ import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.FixedChannelPool;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.util.concurrent.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.codewise.amazon.client.ClientConfiguration;
@@ -84,8 +83,7 @@ public class NettyHttpClient implements AutoCloseable {
     }
 
     public <T> void executeRequest(Request requestData, SubscriptionCompletionHandler<T> completionHandler) {
-        Future<Channel> acquire = channelPool.acquire();
-        acquire.addListener(new RequestSender(s3Location, requestData, completionHandler, channelPool));
+        channelPool.acquire().addListener(new RequestSender(s3Location, requestData, completionHandler, channelPool));
     }
 
     @Override

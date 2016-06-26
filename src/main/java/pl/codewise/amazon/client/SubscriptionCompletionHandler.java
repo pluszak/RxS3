@@ -25,7 +25,7 @@ public class SubscriptionCompletionHandler<T> implements Observer<FullHttpRespon
     private final GenericResponseParser<T> responseParser;
     private final ErrorResponseParser errorResponseParser;
 
-    public SubscriptionCompletionHandler(Subscriber<? super T> subscriber, GenericResponseParser<T> responseParser, ErrorResponseParser errorResponseParser) {
+    SubscriptionCompletionHandler(Subscriber<? super T> subscriber, GenericResponseParser<T> responseParser, ErrorResponseParser errorResponseParser) {
         this.subscriber = subscriber;
 
         this.responseParser = responseParser;
@@ -42,9 +42,9 @@ public class SubscriptionCompletionHandler<T> implements Observer<FullHttpRespon
             return;
         }
 
-        if (!emitExceptionIfUnsuccessful(response.getStatus(), response.content(), subscriber)) {
+        if (!emitExceptionIfUnsuccessful(response.status(), response.content(), subscriber)) {
             try {
-                Optional<T> result = responseParser.parse(response.getStatus(), response.content());
+                Optional<T> result = responseParser.parse(response.status(), response.content());
                 if (result.isPresent()) {
                     subscriber.onNext(result.get());
                 }

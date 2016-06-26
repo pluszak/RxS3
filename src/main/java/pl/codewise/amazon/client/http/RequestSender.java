@@ -31,8 +31,9 @@ public class RequestSender implements FutureListener<Channel> {
         if (!future.isSuccess()) {
             completionHandler.onError(future.cause());
         } else {
-            future.get().pipeline().addBefore(InactiveConnectionsHandler.NAME, null, new HttpClientHandler(channelPool, completionHandler));
-            executeRequest(future.getNow(), requestData);
+            Channel channel = future.getNow();
+            channel.pipeline().addBefore(InactiveConnectionsHandler.NAME, null, new HttpClientHandler(channelPool, completionHandler));
+            executeRequest(channel, requestData);
         }
     }
 

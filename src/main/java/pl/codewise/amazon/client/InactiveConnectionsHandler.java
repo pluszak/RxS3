@@ -15,13 +15,13 @@ public class InactiveConnectionsHandler extends SimpleChannelInboundHandler<Full
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        LOGGER.debug("Channel became inactive");
         super.channelInactive(ctx);
-        LOGGER.error("Channel became inactive!!!");
     }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
-        LOGGER.error("Unexpected channel read invocation");
+        LOGGER.debug("Unexpected channel read invocation");
     }
 
     @Override
