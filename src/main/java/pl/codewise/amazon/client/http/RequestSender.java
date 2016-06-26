@@ -12,14 +12,14 @@ import pl.codewise.amazon.client.InactiveConnectionsHandler;
 import pl.codewise.amazon.client.SubscriptionCompletionHandler;
 import pl.codewise.amazon.client.auth.Operation;
 
-public class RequestSender implements FutureListener<Channel> {
+class RequestSender implements FutureListener<Channel> {
 
     private final String s3Location;
     private final Request requestData;
     private final SubscriptionCompletionHandler completionHandler;
     private final ChannelPool channelPool;
 
-    public RequestSender(String s3Location, Request requestData, SubscriptionCompletionHandler completionHandler, ChannelPool channelPool) {
+    RequestSender(String s3Location, Request requestData, SubscriptionCompletionHandler completionHandler, ChannelPool channelPool) {
         this.s3Location = s3Location;
         this.requestData = requestData;
         this.completionHandler = completionHandler;

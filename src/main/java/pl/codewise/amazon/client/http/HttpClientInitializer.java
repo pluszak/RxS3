@@ -8,12 +8,12 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.timeout.IdleStateHandler;
 import pl.codewise.amazon.client.InactiveConnectionsHandler;
 
-public class HttpClientInitializer {
+class HttpClientInitializer {
 
-    public static final int BYTES_IN_MEGABYTE = 1024 * 1024;
-    public static final int MAX_REQUEST_SIZE = 1000 * BYTES_IN_MEGABYTE;
+    private static final int BYTES_IN_MEGABYTE = 1024 * 1024;
+    private static final int MAX_REQUEST_SIZE = 1000 * BYTES_IN_MEGABYTE;
 
-    public void initChannel(Channel ch) {
+    void initChannel(Channel ch) {
         ChannelPipeline p = ch.pipeline();
         p.addLast(new IdleStateHandler(0, 0, 60));
         p.addLast(new HttpClientCodec());

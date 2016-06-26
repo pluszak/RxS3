@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.codewise.amazon.client.SubscriptionCompletionHandler;
 
-public class HttpClientHandler extends SimpleChannelInboundHandler<FullHttpResponse> {
+class HttpClientHandler extends SimpleChannelInboundHandler<FullHttpResponse> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpClientHandler.class);
 
@@ -21,7 +21,7 @@ public class HttpClientHandler extends SimpleChannelInboundHandler<FullHttpRespo
     private boolean isKeepAlive;
     private boolean handlerNotified;
 
-    public HttpClientHandler(ChannelPool channelPool, SubscriptionCompletionHandler completionHandler) {
+    HttpClientHandler(ChannelPool channelPool, SubscriptionCompletionHandler completionHandler) {
         super(false);
         this.channelPool = channelPool;
         this.completionHandler = completionHandler;
