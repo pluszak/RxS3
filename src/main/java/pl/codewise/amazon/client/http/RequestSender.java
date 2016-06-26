@@ -14,14 +14,17 @@ import pl.codewise.amazon.client.auth.Operation;
 class RequestSender implements FutureListener<Channel> {
 
     private final String s3Location;
-    private final Request requestData;
-    private final SubscriptionCompletionHandler completionHandler;
+    private final HandlerDemultiplexer demultiplexer;
     private final ChannelPool channelPool;
 
-    RequestSender(String s3Location, Request requestData, SubscriptionCompletionHandler completionHandler, ChannelPool channelPool) {
+    private final Request requestData;
+    private final SubscriptionCompletionHandler completionHandler;
+
+    RequestSender(String s3Location, Request requestData, SubscriptionCompletionHandler completionHandler, HandlerDemultiplexer demultiplexer, ChannelPool channelPool) {
         this.s3Location = s3Location;
         this.requestData = requestData;
         this.completionHandler = completionHandler;
+        this.demultiplexer = demultiplexer;
         this.channelPool = channelPool;
     }
 
@@ -35,7 +38,7 @@ class RequestSender implements FutureListener<Channel> {
     }
 
     private void executeRequest(Channel channel, Request requestData) throws Exception {
-        HandlerDemultiplexer.setAttributeValue(channel, new HttpClientHandler(channelPool, completionHandler));
+        demultiplexer.setAttributeValue(channel, new HttpClientHandler(channelPool, completionHandler));
 
         DefaultFullHttpRequest request;
         if (requestData.getOperation().equals(Operation.PUT)) {

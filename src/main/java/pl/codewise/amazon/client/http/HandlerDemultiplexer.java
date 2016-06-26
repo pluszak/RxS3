@@ -18,11 +18,11 @@ class HandlerDemultiplexer extends SimpleChannelInboundHandler<FullHttpResponse>
 
     static final HandlerDemultiplexer INSTANCE = new HandlerDemultiplexer();
 
-    private HandlerDemultiplexer() {
+    HandlerDemultiplexer() {
         super(false);
     }
 
-    static void setAttributeValue(Channel channel, HttpClientHandler handler) {
+    void setAttributeValue(Channel channel, HttpClientHandler handler) {
         channel.attr(HANDLER_ATTRIBUTE_KEY).set(handler);
     }
 

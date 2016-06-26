@@ -25,10 +25,11 @@ public class NettyHttpClient implements AutoCloseable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyHttpClient.class);
 
-    private final EventLoopGroup group;
-    private final ChannelPool channelPool;
-
     private final String s3Location;
+    private final EventLoopGroup group;
+
+    private final HandlerDemultiplexer demultiplexer;
+    private final ChannelPool channelPool;
 
     public NettyHttpClient(ClientConfiguration configuration) {
         ThreadGroup threadGroup = new ThreadGroup("Netty RxS3 client");
@@ -44,6 +45,8 @@ public class NettyHttpClient implements AutoCloseable {
             port = Integer.parseInt(s3LocationArray[1]);
         }
 
+        demultiplexer = new HandlerDemultiplexer();
+
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(group)
                 .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
@@ -55,7 +58,7 @@ public class NettyHttpClient implements AutoCloseable {
 
         channelPool = new FixedChannelPool(bootstrap, new AbstractChannelPoolHandler() {
 
-            HttpClientInitializer initializer = new HttpClientInitializer();
+            HttpClientInitializer initializer = new HttpClientInitializer(demultiplexer);
 
             @Override
             public void channelCreated(Channel ch) {
@@ -83,7 +86,7 @@ public class NettyHttpClient implements AutoCloseable {
     }
 
     public <T> void executeRequest(Request requestData, SubscriptionCompletionHandler<T> completionHandler) {
-        channelPool.acquire().addListener(new RequestSender(s3Location, requestData, completionHandler, channelPool));
+        channelPool.acquire().addListener(new RequestSender(s3Location, requestData, completionHandler, demultiplexer, channelPool));
     }
 
     @Override
