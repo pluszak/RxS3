@@ -36,8 +36,6 @@ public class ErrorResponseParser extends GenericResponseParser<AmazonS3Exception
     public Optional<AmazonS3ExceptionBuilder> parse(HttpResponseStatus status, ByteBuf content) throws IOException {
         try {
             AmazonS3ExceptionBuilder response = parseResponse(status, content);
-            ReferenceCountUtil.release(content);
-
             return Optional.of(response);
         } finally {
             ReferenceCountUtil.release(content);
