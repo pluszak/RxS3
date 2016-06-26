@@ -3,38 +3,33 @@ package pl.codewise.amazon.client.http;
 import java.io.IOException;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.codewise.amazon.client.SubscriptionCompletionHandler;
 
-class HttpClientHandler extends SimpleChannelInboundHandler<FullHttpResponse> {
+class HttpClientHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpClientHandler.class);
 
     private final ChannelPool channelPool;
     private final SubscriptionCompletionHandler completionHandler;
+
     private boolean isKeepAlive;
     private boolean handlerNotified;
 
     HttpClientHandler(ChannelPool channelPool, SubscriptionCompletionHandler completionHandler) {
-        super(false);
         this.channelPool = channelPool;
         this.completionHandler = completionHandler;
     }
 
-    @Override
-    public void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) {
+    void channelRead(ChannelHandlerContext ctx, FullHttpResponse msg) {
         handlerNotified = true;
 
         if (!(isKeepAlive = HttpUtil.isKeepAlive(msg))) {
             ctx.close();
-        } else {
-            ctx.pipeline().remove(this);
         }
 
         channelPool.release(ctx.channel());
@@ -42,12 +37,10 @@ class HttpClientHandler extends SimpleChannelInboundHandler<FullHttpResponse> {
         completionHandler.onCompleted();
     }
 
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+    void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         handlerNotified = true;
         LOGGER.debug("Exception during request", cause);
 
-        ctx.pipeline().remove(this);
         if (!isKeepAlive) {
             ctx.close();
         }
@@ -56,10 +49,7 @@ class HttpClientHandler extends SimpleChannelInboundHandler<FullHttpResponse> {
         completionHandler.onError(cause);
     }
 
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        super.channelInactive(ctx);
-
+    void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (!handlerNotified) {
             handlerNotified = true;
             channelPool.release(ctx.channel());

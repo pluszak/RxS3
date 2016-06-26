@@ -8,7 +8,6 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import pl.codewise.amazon.client.InactiveConnectionsHandler;
 import pl.codewise.amazon.client.SubscriptionCompletionHandler;
 import pl.codewise.amazon.client.auth.Operation;
 
@@ -31,13 +30,13 @@ class RequestSender implements FutureListener<Channel> {
         if (!future.isSuccess()) {
             completionHandler.onError(future.cause());
         } else {
-            Channel channel = future.getNow();
-            channel.pipeline().addBefore(InactiveConnectionsHandler.NAME, null, new HttpClientHandler(channelPool, completionHandler));
-            executeRequest(channel, requestData);
+            executeRequest(future.getNow(), requestData);
         }
     }
 
-    private <T> void executeRequest(Channel channel, Request requestData) throws Exception {
+    private void executeRequest(Channel channel, Request requestData) throws Exception {
+        HandlerDemultiplexer.setAttributeValue(channel, new HttpClientHandler(channelPool, completionHandler));
+
         DefaultFullHttpRequest request;
         if (requestData.getOperation().equals(Operation.PUT)) {
             request = new DefaultFullHttpRequest(

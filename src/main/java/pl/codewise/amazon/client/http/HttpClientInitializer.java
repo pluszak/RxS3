@@ -19,6 +19,7 @@ class HttpClientInitializer {
         p.addLast(new HttpClientCodec());
         p.addLast(new HttpContentDecompressor());
         p.addLast(new HttpObjectAggregator(MAX_REQUEST_SIZE));
-        p.addLast(InactiveConnectionsHandler.NAME, new InactiveConnectionsHandler());
+        p.addLast(HandlerDemultiplexer.INSTANCE);
+        p.addLast(new InactiveConnectionsHandler());
     }
 }

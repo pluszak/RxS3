@@ -11,17 +11,14 @@ public class InactiveConnectionsHandler extends SimpleChannelInboundHandler<Full
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InactiveConnectionsHandler.class);
 
-    public static final String NAME = "InactiveConnectionsHandler";
-
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        LOGGER.debug("Channel became inactive");
-        super.channelInactive(ctx);
+        LOGGER.error("Channel became inactive");
     }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
-        LOGGER.debug("Unexpected channel read invocation");
+        LOGGER.error("Unexpected channel read invocation");
     }
 
     @Override
