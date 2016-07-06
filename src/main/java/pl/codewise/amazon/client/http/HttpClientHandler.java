@@ -6,19 +6,14 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import pl.codewise.amazon.client.SubscriptionCompletionHandler;
 
 class HttpClientHandler {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(HttpClientHandler.class);
-
     private final ChannelPool channelPool;
     private final SubscriptionCompletionHandler completionHandler;
 
-    private boolean isKeepAlive;
-    private boolean handlerNotified;
+    private boolean channelReleased;
 
     HttpClientHandler(ChannelPool channelPool, SubscriptionCompletionHandler completionHandler) {
         this.channelPool = channelPool;
@@ -26,34 +21,33 @@ class HttpClientHandler {
     }
 
     void channelRead(ChannelHandlerContext ctx, FullHttpResponse msg) {
-        handlerNotified = true;
-
-        if (!(isKeepAlive = HttpUtil.isKeepAlive(msg))) {
+        if (!HttpUtil.isKeepAlive(msg)) {
             ctx.close();
         }
 
+        channelReleased = true;
         channelPool.release(ctx.channel());
-        completionHandler.onNext(msg);
-        completionHandler.onCompleted();
+
+        completionHandler.onSuccess(msg);
     }
 
     void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        handlerNotified = true;
-        LOGGER.debug("Exception during request", cause);
+        ctx.close();
 
-        if (!isKeepAlive) {
-            ctx.close();
+        if (!channelReleased) {
+            channelReleased = true;
+            channelPool.release(ctx.channel());
         }
 
-        channelPool.release(ctx.channel());
         completionHandler.onError(cause);
     }
 
     void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        if (!handlerNotified) {
-            handlerNotified = true;
+        if (!channelReleased) {
+            channelReleased = true;
             channelPool.release(ctx.channel());
-            completionHandler.onError(new IOException("Channel become inactive"));
         }
+
+        completionHandler.onError(new IOException("Channel become inactive"));
     }
 }

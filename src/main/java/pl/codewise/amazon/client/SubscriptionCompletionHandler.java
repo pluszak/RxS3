@@ -1,25 +1,20 @@
 package pl.codewise.amazon.client;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.slf4j.Logger;
 import pl.codewise.amazon.client.xml.ErrorResponseParser;
 import pl.codewise.amazon.client.xml.GenericResponseParser;
 import rx.Observer;
 import rx.Subscriber;
-import rx.exceptions.OnErrorNotImplementedException;
 
-import static org.slf4j.LoggerFactory.getLogger;
+public class SubscriptionCompletionHandler<T> {
 
-public class SubscriptionCompletionHandler<T> implements Observer<FullHttpResponse> {
-
-    private static final Logger LOGGER = getLogger(SubscriptionCompletionHandler.class);
-
+    private AtomicBoolean downstreamNotified = new AtomicBoolean();
     private final Subscriber<? super T> subscriber;
 
     private final GenericResponseParser<T> responseParser;
@@ -32,13 +27,8 @@ public class SubscriptionCompletionHandler<T> implements Observer<FullHttpRespon
         this.errorResponseParser = errorResponseParser;
     }
 
-    @Override
-    public void onNext(FullHttpResponse response) {
-        if (LOGGER.isTraceEnabled()) {
-            LOGGER.trace("Amazon response '{}'", response.content().toString(Charset.defaultCharset()));
-        }
-
-        if (subscriber.isUnsubscribed()) {
+    public void onSuccess(FullHttpResponse response) {
+        if (subscriber.isUnsubscribed() || !downstreamNotified.compareAndSet(false, true)) {
             return;
         }
 
@@ -56,30 +46,20 @@ public class SubscriptionCompletionHandler<T> implements Observer<FullHttpRespon
         }
     }
 
-    @Override
-    public void onCompleted() {
-    }
-
-    @Override
     public void onError(Throwable t) {
-        LOGGER.debug("Error while processing S3 request", t);
-        subscriber.onError(t);
+        if (downstreamNotified.compareAndSet(false, true)) {
+            subscriber.onError(t);
+        }
     }
 
     private boolean emitExceptionIfUnsuccessful(HttpResponseStatus status, ByteBuf content, Observer<?> observer) {
-        try {
-            if (!status.equals(HttpResponseStatus.OK) && !status.equals(HttpResponseStatus.NO_CONTENT)) {
-                try {
-                    observer.onError(errorResponseParser.parse(status, content).get().build());
-                } catch (IOException e) {
-                    observer.onError(new RuntimeException("Received unparseable error with code: " + status));
-                }
-
-                return true;
+        if (!status.equals(HttpResponseStatus.OK) && !status.equals(HttpResponseStatus.NO_CONTENT)) {
+            try {
+                observer.onError(errorResponseParser.parse(status, content).get().build());
+            } catch (IOException e) {
+                observer.onError(new RuntimeException("Received unparseable error with code: " + status));
             }
-        } catch (OnErrorNotImplementedException e) {
-            LOGGER.error("Error processing response (and onError not implemented)", e);
-            observer.onCompleted();
+
             return true;
         }
 
