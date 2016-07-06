@@ -16,8 +16,6 @@ class HandlerDemultiplexer extends SimpleChannelInboundHandler<FullHttpResponse>
 
     private static final AttributeKey<HttpClientHandler> HANDLER_ATTRIBUTE_KEY = AttributeKey.valueOf("handler");
 
-    static final HandlerDemultiplexer INSTANCE = new HandlerDemultiplexer();
-
     HandlerDemultiplexer() {
         super(false);
     }

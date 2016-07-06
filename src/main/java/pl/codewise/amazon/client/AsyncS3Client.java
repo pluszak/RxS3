@@ -7,8 +7,6 @@ import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import javolution.text.TextBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 import pl.codewise.amazon.client.auth.AWSSignatureCalculatorFactory;
@@ -24,8 +22,6 @@ import static pl.codewise.amazon.client.RestUtils.appendQueryString;
 
 @SuppressWarnings("UnusedDeclaration")
 public class AsyncS3Client implements Closeable {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(AsyncS3Client.class);
 
     private final NettyHttpClient httpClient;
 
