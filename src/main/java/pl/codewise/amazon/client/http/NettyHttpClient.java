@@ -2,7 +2,6 @@ package pl.codewise.amazon.client.http;
 
 import java.lang.reflect.Field;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.bootstrap.Bootstrap;
@@ -16,15 +15,11 @@ import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.FixedChannelPool;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import pl.codewise.amazon.client.ClientConfiguration;
 import pl.codewise.amazon.client.SubscriptionCompletionHandler;
 import pl.codewise.amazon.client.auth.Operation;
 
 public class NettyHttpClient implements AutoCloseable {
-
-    private static final int DEFAULT_SO_TIMEOUT = (int) TimeUnit.SECONDS.toMillis(30);
 
     private final String s3Location;
     private final EventLoopGroup group;
@@ -53,7 +48,6 @@ public class NettyHttpClient implements AutoCloseable {
                 .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
                 .option(ChannelOption.SO_KEEPALIVE, true)
                 .option(ChannelOption.TCP_NODELAY, true)
-                .option(ChannelOption.SO_TIMEOUT, DEFAULT_SO_TIMEOUT)
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, configuration.getConnectionTimeoutMillis())
                 .channel(NioSocketChannel.class)
                 .remoteAddress(s3Location, port);
