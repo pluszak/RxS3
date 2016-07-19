@@ -5,4 +5,8 @@ RxS3
 
 RxS3 is a lightweight, asynchronous AmazonS3 client.
 
-It provides RxJava interface for asynchronously handling replies from S3. 
+It provides RxJava interface for asynchronously handling replies from S3.
+
+As of 19/07/2016 this project is used by our* production systems to execute 24 million of S3 lists daily.
+
+*Codewise products: Zeropark.com, Voluum.com
