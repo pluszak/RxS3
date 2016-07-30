@@ -54,8 +54,12 @@ public class AsyncS3Client implements Closeable {
         return httpClient.acquiredConnections();
     }
 
-    public Observable<InputStream> putObject(String bucketName, String key, byte[] data, ObjectMetadata metadata) {
-        Request request = httpClient.preparePut("/" + key)
+    public Observable<InputStream> putObject(String bucketName, CharSequence key, byte[] data, ObjectMetadata metadata) {
+        TextBuilder urlBuilder = TextBuilders.threadLocal();
+        urlBuilder.append("/")
+                .append(key);
+
+        Request request = httpClient.preparePut(urlBuilder.toString())
                 .setBucketName(bucketName)
                 .setSignatureCalculatorFactory(signatureCalculatorFactory)
                 .setBody(data)
