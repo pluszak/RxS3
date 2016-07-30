@@ -75,7 +75,7 @@ public class AsyncS3Client implements Closeable {
         return listObjects(bucketName, (String) null);
     }
 
-    public void listObjects(String bucketName, String prefix, Subscriber<? super ObjectListing> subscriber) {
+    public void listObjects(String bucketName, CharSequence prefix, Subscriber<? super ObjectListing> subscriber) {
         TextBuilder urlBuilder = TextBuilders.threadLocal();
         urlBuilder.append("/?");
         appendQueryString(urlBuilder, prefix, null, null, null);
@@ -88,7 +88,7 @@ public class AsyncS3Client implements Closeable {
         retrieveResult(request, listResponseParser, subscriber);
     }
 
-    public Observable<ObjectListing> listObjects(String bucketName, String prefix) {
+    public Observable<ObjectListing> listObjects(String bucketName, CharSequence prefix) {
         return Observable.create(subscriber -> listObjects(bucketName, prefix, subscriber));
     }
 
@@ -152,7 +152,7 @@ public class AsyncS3Client implements Closeable {
         return Observable.create(subscriber -> listObjects(listObjectsRequest, subscriber));
     }
 
-    public Observable<InputStream> getObject(String bucketName, String location) {
+    public Observable<InputStream> getObject(String bucketName, CharSequence location) {
         TextBuilder urlBuilder = TextBuilders.threadLocal();
         urlBuilder.append("/");
         UTF8UrlEncoder.appendEncoded(urlBuilder, location);
@@ -165,7 +165,7 @@ public class AsyncS3Client implements Closeable {
         return retrieveResult(request, ConsumeBytesParser.getInstance());
     }
 
-    public Observable<?> deleteObject(String bucketName, String location) {
+    public Observable<?> deleteObject(String bucketName, CharSequence location) {
         TextBuilder urlBuilder = TextBuilders.threadLocal();
         urlBuilder.append("/");
         UTF8UrlEncoder.appendEncoded(urlBuilder, location);
