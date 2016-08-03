@@ -6,6 +6,8 @@ import java.io.InputStream;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import javolution.text.TextBuilder;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
@@ -20,6 +22,11 @@ import rx.Subscriber;
 
 import static pl.codewise.amazon.client.RestUtils.appendQueryString;
 
+/**
+ * Note that CharSequence arguments will be copied to internal data structure before returning from AsyncS3Client method
+ * call. This means that no CharSequence will be stored or passed to another thread and clients can safely reuse backing
+ * storage (e.g. StringBuilder) after call to AsyncS3Client method returns.
+ */
 @SuppressWarnings("UnusedDeclaration")
 public class AsyncS3Client implements Closeable {
 
@@ -55,6 +62,10 @@ public class AsyncS3Client implements Closeable {
     }
 
     public Observable<InputStream> putObject(String bucketName, CharSequence key, byte[] data, ObjectMetadata metadata) {
+        return putObject(bucketName, key, Unpooled.wrappedBuffer(data), metadata);
+    }
+
+    public Observable<InputStream> putObject(String bucketName, CharSequence key, ByteBuf data, ObjectMetadata metadata) {
         TextBuilder urlBuilder = TextBuilders.threadLocal();
         urlBuilder.append("/")
                 .append(key);

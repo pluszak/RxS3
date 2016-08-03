@@ -1,8 +1,6 @@
 package pl.codewise.amazon.client.http;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import pl.codewise.amazon.client.auth.AWSSignatureCalculator;
 import pl.codewise.amazon.client.auth.AWSSignatureCalculatorFactory;
 import pl.codewise.amazon.client.auth.Operation;
 
@@ -14,7 +12,7 @@ public class Request {
     private String bucketName;
     private AWSSignatureCalculatorFactory signatureCalculatorFactory;
 
-    private byte[] body;
+    private ByteBuf body;
 
     private String contentType = "";
     private long contentLength;
@@ -35,7 +33,7 @@ public class Request {
         return this;
     }
 
-    public Request setBody(byte[] body) {
+    public Request setBody(ByteBuf body) {
         this.body = body;
         return this;
     }
@@ -72,7 +70,7 @@ public class Request {
     }
 
     public ByteBuf getBody() {
-        return Unpooled.wrappedBuffer(body);
+        return body;
     }
 
     public String getContentType() {
