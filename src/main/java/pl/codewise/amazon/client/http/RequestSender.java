@@ -33,13 +33,15 @@ class RequestSender implements FutureListener<Channel> {
         if (!future.isSuccess()) {
             completionHandler.onError(future.cause());
         } else {
-            executeRequest(future.getNow(), requestData);
+            try {
+                executeRequest(future.getNow(), requestData);
+            } catch (Exception e) {
+                completionHandler.onError(e);
+            }
         }
     }
 
     private void executeRequest(Channel channel, Request requestData) throws Exception {
-        demultiplexer.setAttributeValue(channel, new HttpClientHandler(channelPool, completionHandler));
-
         DefaultFullHttpRequest request;
         if (requestData.getOperation().equals(Operation.PUT)) {
             request = new DefaultFullHttpRequest(
@@ -59,6 +61,7 @@ class RequestSender implements FutureListener<Channel> {
         requestData.getSignatureCalculatorFactory().getSignatureCalculator()
                 .calculateAndAddSignature(request.headers(), requestData);
 
+        demultiplexer.setAttributeValue(channel, new HttpClientHandler(channelPool, completionHandler));
         channel.writeAndFlush(request);
     }
 }
