@@ -1,15 +1,13 @@
 package pl.codewise.amazon.client.xml;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Optional;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.util.ReferenceCountUtil;
+import pl.codewise.amazon.client.SizedInputStream;
 
-public class ConsumeBytesParser extends GenericResponseParser<InputStream> {
+public class ConsumeBytesParser extends GenericResponseParser<SizedInputStream> {
 
     private static final ConsumeBytesParser INSTANCE = new ConsumeBytesParser();
 
@@ -22,14 +20,7 @@ public class ConsumeBytesParser extends GenericResponseParser<InputStream> {
     }
 
     @Override
-    public Optional<InputStream> parse(HttpResponseStatus status, ByteBuf content) throws IOException {
-        return Optional.of(new ByteBufInputStream(content) {
-
-            @Override
-            public void close() throws IOException {
-                super.close();
-                ReferenceCountUtil.release(content);
-            }
-        });
+    public Optional<SizedInputStream> parse(HttpResponseStatus status, ByteBuf content) throws IOException {
+        return Optional.of(new SizedInputStream(content));
     }
 }

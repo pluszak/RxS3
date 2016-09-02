@@ -61,11 +61,11 @@ public class AsyncS3Client implements Closeable {
         return httpClient.acquiredConnections();
     }
 
-    public Observable<InputStream> putObject(String bucketName, CharSequence key, byte[] data, ObjectMetadata metadata) {
+    public Observable<SizedInputStream> putObject(String bucketName, CharSequence key, byte[] data, ObjectMetadata metadata) {
         return putObject(bucketName, key, Unpooled.wrappedBuffer(data), metadata);
     }
 
-    public Observable<InputStream> putObject(String bucketName, CharSequence key, ByteBuf data, ObjectMetadata metadata) {
+    public Observable<SizedInputStream> putObject(String bucketName, CharSequence key, ByteBuf data, ObjectMetadata metadata) {
         TextBuilder urlBuilder = TextBuilders.threadLocal();
         urlBuilder.append("/")
                 .append(key);
@@ -167,7 +167,7 @@ public class AsyncS3Client implements Closeable {
         return Observable.create(subscriber -> listObjects(listObjectsRequest, subscriber));
     }
 
-    public Observable<InputStream> getObject(String bucketName, CharSequence location) {
+    public Observable<SizedInputStream> getObject(String bucketName, CharSequence location) {
         TextBuilder urlBuilder = TextBuilders.threadLocal();
         urlBuilder.append("/");
         UTF8UrlEncoder.appendEncoded(urlBuilder, location);
