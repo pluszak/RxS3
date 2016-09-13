@@ -11,7 +11,7 @@ import pl.codewise.amazon.client.InactiveConnectionsHandler;
 class HttpClientInitializer {
 
     private static final int BYTES_IN_MEGABYTE = 1024 * 1024;
-    private static final int MAX_REQUEST_SIZE = 1000 * BYTES_IN_MEGABYTE;
+    private static final int MAX_REQUEST_SIZE = 1200 * BYTES_IN_MEGABYTE;
 
     private final HandlerDemultiplexer demultiplexer;
 
