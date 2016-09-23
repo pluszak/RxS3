@@ -1,6 +1,5 @@
 package pl.codewise.amazon.client.http;
 
-import io.netty.buffer.UnpooledHeapByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -9,14 +8,10 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import pl.codewise.amazon.client.SubscriptionCompletionHandler;
 import pl.codewise.amazon.client.auth.Operation;
 
 class RequestSender implements FutureListener<Channel> {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(RequestSender.class);
 
     private final String s3Location;
     private final HandlerDemultiplexer demultiplexer;
@@ -54,11 +49,6 @@ class RequestSender implements FutureListener<Channel> {
         } else {
             request = new DefaultFullHttpRequest(
                     HttpVersion.HTTP_1_1, requestData.getOperation().getHttpMethod(), requestData.getUrl());
-        }
-
-        if (requestData.getBody() != null && !(requestData.getBody() instanceof UnpooledHeapByteBuf)) {
-            LOGGER.warn("Pooled buffer used {} for method {} on url {}",
-                    requestData.getBody().getClass(), requestData.getOperation(), requestData.getUrl());
         }
 
         request.headers().set(HttpHeaderNames.HOST, requestData.getBucketName() + "." + s3Location);

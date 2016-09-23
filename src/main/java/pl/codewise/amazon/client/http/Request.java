@@ -1,6 +1,7 @@
 package pl.codewise.amazon.client.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import pl.codewise.amazon.client.auth.AWSSignatureCalculatorFactory;
 import pl.codewise.amazon.client.auth.Operation;
 
@@ -34,7 +35,7 @@ public class Request {
     }
 
     public Request setBody(ByteBuf body) {
-        this.body = body;
+        this.body = Unpooled.unreleasableBuffer(body);
         return this;
     }
 
