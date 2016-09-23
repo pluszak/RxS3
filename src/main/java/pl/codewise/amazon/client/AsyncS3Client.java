@@ -1,7 +1,6 @@
 package pl.codewise.amazon.client;
 
 import java.io.Closeable;
-import java.io.InputStream;
 
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
@@ -61,11 +60,11 @@ public class AsyncS3Client implements Closeable {
         return httpClient.acquiredConnections();
     }
 
-    public Observable<SizedInputStream> putObject(String bucketName, CharSequence key, byte[] data, ObjectMetadata metadata) {
+    public Observable<?> putObject(String bucketName, CharSequence key, byte[] data, ObjectMetadata metadata) {
         return putObject(bucketName, key, Unpooled.wrappedBuffer(data), metadata);
     }
 
-    public Observable<SizedInputStream> putObject(String bucketName, CharSequence key, ByteBuf data, ObjectMetadata metadata) {
+    public Observable<?> putObject(String bucketName, CharSequence key, ByteBuf data, ObjectMetadata metadata) {
         TextBuilder urlBuilder = TextBuilders.threadLocal();
         urlBuilder.append("/")
                 .append(key);
@@ -79,7 +78,7 @@ public class AsyncS3Client implements Closeable {
                 .setContentType(metadata.getContentType())
                 .build();
 
-        return retrieveResult(request, ConsumeBytesParser.getInstance());
+        return retrieveResult(request, DiscardBytesParser.getInstance());
     }
 
     public void listObjects(String bucketName, Subscriber<ObjectListing> subscriber) {
