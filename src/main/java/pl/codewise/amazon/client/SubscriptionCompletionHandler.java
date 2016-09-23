@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.ReferenceCountUtil;
 import pl.codewise.amazon.client.xml.ErrorResponseParser;
 import pl.codewise.amazon.client.xml.GenericResponseParser;
 import rx.Observer;
@@ -29,6 +30,7 @@ public class SubscriptionCompletionHandler<T> {
 
     public void onSuccess(FullHttpResponse response) {
         if (subscriber.isUnsubscribed() || !downstreamNotified.compareAndSet(false, true)) {
+            ReferenceCountUtil.release(response);
             return;
         }
 
