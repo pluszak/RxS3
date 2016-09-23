@@ -56,7 +56,7 @@ class RequestSender implements FutureListener<Channel> {
                     HttpVersion.HTTP_1_1, requestData.getOperation().getHttpMethod(), requestData.getUrl());
         }
 
-        if (!(requestData.getBody() instanceof UnpooledHeapByteBuf)) {
+        if (requestData.getBody() != null && !(requestData.getBody() instanceof UnpooledHeapByteBuf)) {
             LOGGER.warn("Pooled buffer used {} for method {} on url {}",
                     requestData.getBody().getClass(), requestData.getOperation(), requestData.getUrl());
         }
