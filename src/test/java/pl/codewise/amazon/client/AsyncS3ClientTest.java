@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.testng.annotations.*;
 import rx.Observable;
 import rx.Subscriber;
+import rx.observers.TestSubscriber;
 import rx.subjects.PublishSubject;
 
 import static org.slf4j.LoggerFactory.getLogger;
@@ -318,12 +319,17 @@ public class AsyncS3ClientTest {
         metadata.setContentType("application/octet-stream");
         metadata.setContentMD5(getBase64EncodedMD5Hash(data));
 
+        TestSubscriber<Object> subscriber = new TestSubscriber<>();
+
         // When
         client.putObject(bucketName, objectName, data, metadata)
-                .toBlocking()
-                .single();
+                .subscribe(subscriber);
 
         // Then
+        subscriber.awaitTerminalEvent();
+        subscriber.assertCompleted();
+        subscriber.assertNoValues();
+
         S3Object object = amazonS3Client.getObject(bucketName, objectName);
         byte[] actual = IOUtils.toByteArray(object.getObjectContent());
 
