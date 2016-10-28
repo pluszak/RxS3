@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.testng.annotations.*;
 import rx.Observable;
 import rx.Subscriber;
+import rx.functions.Func1;
 import rx.observers.TestSubscriber;
 import rx.subjects.PublishSubject;
 
@@ -290,7 +291,7 @@ public class AsyncS3ClientTest {
     }
 
     @Test
-    public void shouldListCommonPrefixes() throws IOException {
+    public void shouldListCommonPrefixes_ContainingFiles() throws IOException {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
         request.setBucketName(bucketName);
@@ -309,6 +310,89 @@ public class AsyncS3ClientTest {
     }
 
     @Test
+    public void shouldListCommonPrefixesInBatches_ContainingFiles() throws IOException {
+        // Given
+        ListObjectsRequest request = new ListObjectsRequest();
+        request.setBucketName(bucketName);
+        request.setPrefix("COUNTRY_BY_DATE/2014/05/");
+        request.setMaxKeys(1);
+        request.setDelimiter("/");
+
+        // When
+        ObjectListing amazonListing = amazonS3Client.listObjects(request);
+        Observable<ObjectListing> listing = client.listObjects(request);
+
+        // Then
+        while (amazonListing.isTruncated()) {
+            ObjectListing objectListing = listing.toBlocking().single();
+
+            assertThat(objectListing)
+                    .ignoreFields(fieldsToIgnore)
+                    .isEqualTo(amazonListing)
+                    .isTruncated();
+
+            amazonListing = amazonS3Client.listNextBatchOfObjects(amazonListing);
+            listing = client.listNextBatchOfObjects(objectListing);
+        }
+
+        assertThat(listing)
+                .ignoreFields(fieldsToIgnore)
+                .isEqualTo(amazonListing)
+                .isNotTruncated();
+    }
+
+    @Test
+    public void shouldListCommonPrefixes_ContainingDirectories() throws IOException {
+        // Given
+        ListObjectsRequest request = new ListObjectsRequest();
+        request.setBucketName(bucketName);
+        request.setPrefix("COUNTRY_BY_DATE/2014/");
+        request.setDelimiter("/");
+
+        // When
+        Observable<ObjectListing> listing = client.listObjects(request);
+        ObjectListing amazonListing = amazonS3Client.listObjects(request);
+
+        // Then
+        assertThat(listing)
+                .ignoreFields(fieldsToIgnore)
+                .isEqualTo(amazonListing)
+                .isNotTruncated();
+    }
+
+    @Test
+    public void shouldListCommonPrefixesInBatches_ContainingDirectories() throws IOException {
+        // Given
+        ListObjectsRequest request = new ListObjectsRequest();
+        request.setBucketName(bucketName);
+        request.setPrefix("COUNTRY_BY_DATE/2014/");
+        request.setMaxKeys(1);
+        request.setDelimiter("/");
+
+        // When
+        Observable<ObjectListing> listing = client.listObjects(request);
+        ObjectListing amazonListing = amazonS3Client.listObjects(request);
+
+        // Then
+        while (amazonListing.isTruncated()) {
+            ObjectListing objectListing = listing.toBlocking().single();
+
+            assertThat(objectListing)
+                    .ignoreFields(fieldsToIgnore)
+                    .isEqualTo(amazonListing)
+                    .isTruncated();
+
+            amazonListing = amazonS3Client.listNextBatchOfObjects(amazonListing);
+            listing = client.listNextBatchOfObjects(objectListing);
+        }
+
+        assertThat(listing)
+                .ignoreFields(fieldsToIgnore)
+                .isEqualTo(amazonListing)
+                .isNotTruncated();
+    }
+
+    @Test
     public void shouldPutObject() throws IOException {
         // Given
         String objectName = RandomStringUtils.randomAlphanumeric(55);
@@ -319,16 +403,30 @@ public class AsyncS3ClientTest {
         metadata.setContentType("application/octet-stream");
         metadata.setContentMD5(getBase64EncodedMD5Hash(data));
 
-        TestSubscriber<Object> subscriber = new TestSubscriber<>();
+        TestSubscriber<Object> subscriber1 = new TestSubscriber<>();
+        TestSubscriber<Object> subscriber2 = new TestSubscriber<>();
+        TestSubscriber<Object> subscriber3 = new TestSubscriber<>();
 
         // When
-        client.putObject(bucketName, objectName, data, metadata)
-                .subscribe(subscriber);
+        Observable<?> observable = client.putObject(bucketName, objectName, data, metadata);
+        observable.subscribe(subscriber1);
 
         // Then
-        subscriber.awaitTerminalEvent();
-        subscriber.assertCompleted();
-        subscriber.assertNoValues();
+        subscriber1.awaitTerminalEvent();
+        subscriber1.assertCompleted();
+        subscriber1.assertNoValues();
+
+        observable.subscribe(subscriber2);
+
+        subscriber2.awaitTerminalEvent();
+        subscriber2.assertCompleted();
+        subscriber2.assertNoValues();
+
+        observable.subscribe(subscriber3);
+
+        subscriber3.awaitTerminalEvent();
+        subscriber3.assertCompleted();
+        subscriber3.assertNoValues();
 
         S3Object object = amazonS3Client.getObject(bucketName, objectName);
         byte[] actual = IOUtils.toByteArray(object.getObjectContent());
@@ -384,5 +482,18 @@ public class AsyncS3ClientTest {
     private String getBase64EncodedMD5Hash(byte[] packet) {
         byte[] digest = DigestUtils.md5(packet);
         return new String(Base64.encodeBase64(digest));
+    }
+
+    private Func1<ObjectListing, Observable<? extends ObjectListing>> continueIfTruncated(AsyncS3Client asyncS3Client) {
+        return listing -> {
+            if (listing.isTruncated()) {
+                Observable<ObjectListing> observable = asyncS3Client.listNextBatchOfObjects(listing)
+                        .flatMap(continueIfTruncated(asyncS3Client));
+
+                return Observable.just(listing).concatWith(observable);
+            }
+
+            return Observable.just(listing);
+        };
     }
 }
