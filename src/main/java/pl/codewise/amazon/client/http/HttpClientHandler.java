@@ -6,6 +6,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpUtil;
 import pl.codewise.amazon.client.SubscriptionCompletionHandler;
 
@@ -22,7 +23,7 @@ class HttpClientHandler {
     }
 
     void channelRead(ChannelHandlerContext ctx, FullHttpResponse msg) {
-        if (!HttpUtil.isKeepAlive(msg)) {
+        if (!HttpHeaders.isKeepAlive(msg)) {
             ctx.close();
         }
 
