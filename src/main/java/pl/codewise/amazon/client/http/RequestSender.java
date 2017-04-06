@@ -8,10 +8,14 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import pl.codewise.amazon.client.SubscriptionCompletionHandler;
 import pl.codewise.amazon.client.auth.Operation;
 
 class RequestSender implements FutureListener<Channel> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(RequestSender.class);
 
     private final String s3Location;
     private final HandlerDemultiplexer demultiplexer;
@@ -61,7 +65,14 @@ class RequestSender implements FutureListener<Channel> {
         requestData.getSignatureCalculatorFactory().getSignatureCalculator()
                 .calculateAndAddSignature(request.headers(), requestData);
 
-        demultiplexer.setAttributeValue(channel, new HttpClientHandler(channelPool, completionHandler));
-        channel.writeAndFlush(request);
+        HttpClientHandler httpClientHandler = new HttpClientHandler(channelPool, completionHandler);
+        demultiplexer.setAttributeValue(channel, httpClientHandler);
+        channel.writeAndFlush(request)
+                .addListener(writeFuture -> {
+                    if (!writeFuture.isSuccess()) {
+                        LOGGER.error("Exception during write and flush", writeFuture.cause());
+                        httpClientHandler.exceptionCaught(channel, writeFuture.cause());
+                    }
+                });
     }
 }
