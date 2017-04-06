@@ -2,6 +2,7 @@ package pl.codewise.amazon.client.http;
 
 import java.io.IOException;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -31,12 +32,12 @@ class HttpClientHandler {
         completionHandler.onSuccess(msg);
     }
 
-    void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        ctx.close();
+    void exceptionCaught(Channel channel, Throwable cause) {
+        channel.close();
 
         if (!channelReleased) {
             channelReleased = true;
-            channelPool.release(ctx.channel());
+            channelPool.release(channel);
         }
 
         completionHandler.onError(cause);

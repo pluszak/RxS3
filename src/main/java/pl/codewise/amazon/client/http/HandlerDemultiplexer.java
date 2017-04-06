@@ -38,7 +38,7 @@ class HandlerDemultiplexer extends SimpleChannelInboundHandler<FullHttpResponse>
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         HttpClientHandler httpClientHandler = ctx.channel().attr(HANDLER_ATTRIBUTE_KEY).get();
         if (httpClientHandler != null) {
-            httpClientHandler.exceptionCaught(ctx, cause);
+            httpClientHandler.exceptionCaught(ctx.channel(), cause);
         } else {
             super.exceptionCaught(ctx, cause);
         }
