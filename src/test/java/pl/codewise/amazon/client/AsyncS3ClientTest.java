@@ -1,14 +1,5 @@
 package pl.codewise.amazon.client;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.TimeZone;
-import java.util.concurrent.ExecutionException;
-
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
@@ -31,6 +22,14 @@ import rx.functions.Func1;
 import rx.observers.TestSubscriber;
 import rx.subjects.PublishSubject;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
+
 import static org.slf4j.LoggerFactory.getLogger;
 import static pl.codewise.amazon.client.AsyncS3ClientAssertions.assertThat;
 
@@ -38,24 +37,24 @@ public class AsyncS3ClientTest {
 
     private static final Logger LOGGER = getLogger(AsyncS3ClientTest.class);
 
-    public static final String ACCESS_KEY_PROPERTY_NAME = "s3.accessKey";
-    public static final String SECRET_KEY_PROPERTY_NAME = "s3.secretKey";
-    public static final String EMPTY_CREDENTIAL = "empty";
+    private static final String ACCESS_KEY_PROPERTY_NAME = "s3.accessKey";
+    private static final String SECRET_KEY_PROPERTY_NAME = "s3.secretKey";
+    private static final String EMPTY_CREDENTIAL = "empty";
 
-    public static final String BUCKET_NAME_PROPERTY_NAME = "s3.bucketName";
-    public static final String DEFAULT_BUCKET_NAME = "async-client-test";
+    private static final String BUCKET_NAME_PROPERTY_NAME = "s3.bucketName";
+    private static final String DEFAULT_BUCKET_NAME = "async-client-test";
 
     private String bucketName;
-    protected BasicAWSCredentials credentials;
+    BasicAWSCredentials credentials;
 
     private TestS3Object PL = TestS3Object.withNameAndRandomMetadata("COUNTRY_BY_DATE/2014/05/PL", 2);
     private TestS3Object US = TestS3Object.withNameAndRandomMetadata("COUNTRY_BY_DATE/2014/05/US", 3);
     private TestS3Object CZ = TestS3Object.withNameAndRandomMetadata("COUNTRY_BY_DATE/2014/06/CZ", 0);
     private TestS3Object UK = TestS3Object.withNameAndRandomMetadata("COUNTRY_BY_DATE/2014/07/UK", 1);
 
-    protected ClientConfiguration configuration;
+    ClientConfiguration configuration;
 
-    protected List<String> fieldsToIgnore = new ArrayList<>();
+    List<String> fieldsToIgnore = new ArrayList<>();
 
     private AmazonS3Client amazonS3Client;
     private AsyncS3Client client;
@@ -132,7 +131,7 @@ public class AsyncS3ClientTest {
     }
 
     @Test
-    public void shouldListObjectsInBucket() throws IOException {
+    public void shouldListObjectsInBucket() {
         // When
         Observable<ObjectListing> listing = client.listObjects(bucketName);
         ObjectListing amazonListing = amazonS3Client.listObjects(bucketName);
@@ -144,7 +143,7 @@ public class AsyncS3ClientTest {
     }
 
     @Test
-    public void shouldListObjects() throws IOException {
+    public void shouldListObjects() {
         // When
         Observable<ObjectListing> listing = client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/");
         ObjectListing amazonListing = amazonS3Client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/");
@@ -156,7 +155,7 @@ public class AsyncS3ClientTest {
     }
 
     @Test
-    public void shouldListObjectsWhenUsingRequest() throws IOException {
+    public void shouldListObjectsWhenUsingRequest() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
         request.setBucketName(bucketName);
@@ -173,12 +172,12 @@ public class AsyncS3ClientTest {
     }
 
     @Test
-    public void shouldListObjectBatches() throws IOException {
+    public void shouldListObjectBatches() {
         // When & Then
         PublishSubject<ObjectListing> inProgressSubject = PublishSubject.create();
         PublishSubject<ObjectListing> completedSubject = PublishSubject.create();
 
-        Observable<ObjectListing> listing = Observable.create((Subscriber<? super ObjectListing> subscriber) -> client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/05/", subscriber));
+        Observable<ObjectListing> listing = Observable.unsafeCreate((Subscriber<? super ObjectListing> subscriber) -> client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/05/", subscriber));
         ObjectListing amazonListing = amazonS3Client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/05/");
 
         inProgressSubject.subscribe(objectListing -> {
@@ -199,7 +198,7 @@ public class AsyncS3ClientTest {
     }
 
     @Test
-    public void shouldListObjectBatchesWhenStartingWithARequest() throws IOException {
+    public void shouldListObjectBatchesWhenStartingWithARequest() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
         request.setBucketName(bucketName);
@@ -221,7 +220,7 @@ public class AsyncS3ClientTest {
     }
 
     @Test
-    public void shouldListObjectWithMaxKeysLimit() throws IOException {
+    public void shouldListObjectWithMaxKeysLimit() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
         request.setBucketName(bucketName);
@@ -241,7 +240,7 @@ public class AsyncS3ClientTest {
     }
 
     @Test
-    public void shouldListObjectBatchesWhenUsingRequest() throws IOException {
+    public void shouldListObjectBatchesWhenUsingRequest() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
         request.setBucketName(bucketName);
@@ -268,7 +267,7 @@ public class AsyncS3ClientTest {
     }
 
     @Test
-    public void shouldReturnEmptyListingWhenNotTruncated() throws IOException {
+    public void shouldReturnEmptyListingWhenNotTruncated() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
         request.setBucketName(bucketName);
@@ -291,7 +290,7 @@ public class AsyncS3ClientTest {
     }
 
     @Test
-    public void shouldListCommonPrefixes_ContainingFiles() throws IOException {
+    public void shouldListCommonPrefixes_ContainingFiles() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
         request.setBucketName(bucketName);
@@ -310,7 +309,7 @@ public class AsyncS3ClientTest {
     }
 
     @Test
-    public void shouldListCommonPrefixesInBatches_ContainingFiles() throws IOException {
+    public void shouldListCommonPrefixesInBatches_ContainingFiles() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
         request.setBucketName(bucketName);
@@ -342,7 +341,7 @@ public class AsyncS3ClientTest {
     }
 
     @Test
-    public void shouldListCommonPrefixes_ContainingDirectories() throws IOException {
+    public void shouldListCommonPrefixes_ContainingDirectories() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
         request.setBucketName(bucketName);
@@ -361,7 +360,7 @@ public class AsyncS3ClientTest {
     }
 
     @Test
-    public void shouldListCommonPrefixesInBatches_ContainingDirectories() throws IOException {
+    public void shouldListCommonPrefixesInBatches_ContainingDirectories() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
         request.setBucketName(bucketName);
@@ -435,7 +434,7 @@ public class AsyncS3ClientTest {
     }
 
     @Test
-    public void shouldGetObject() throws IOException {
+    public void shouldGetObject() {
         // Given
         String objectName = RandomStringUtils.randomAlphanumeric(55);
         byte[] data = RandomStringUtils.randomAlphanumeric(10 * 1024).getBytes();
@@ -457,7 +456,7 @@ public class AsyncS3ClientTest {
     }
 
     @Test
-    public void shouldDeleteObject() throws IOException, ExecutionException, InterruptedException {
+    public void shouldDeleteObject() {
         // Given
         String objectName = RandomStringUtils.randomAlphanumeric(55);
         byte[] data = RandomStringUtils.randomAlphanumeric(10 * 1024).getBytes();
