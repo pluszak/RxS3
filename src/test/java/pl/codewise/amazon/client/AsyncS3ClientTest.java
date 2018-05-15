@@ -130,7 +130,7 @@ public class AsyncS3ClientTest {
         );
     }
 
-    @Test
+    @Test(enabled = false)
     public void shouldListObjectsInBucket() {
         // When
         Observable<ObjectListing> listing = client.listObjects(bucketName);
@@ -142,7 +142,7 @@ public class AsyncS3ClientTest {
                 .isEqualTo(amazonListing);
     }
 
-    @Test
+    @Test(enabled = false)
     public void shouldListObjects() {
         // When
         Observable<ObjectListing> listing = client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/");
@@ -154,7 +154,7 @@ public class AsyncS3ClientTest {
                 .isEqualTo(amazonListing);
     }
 
-    @Test
+    @Test(enabled = false)
     public void shouldListObjectsWhenUsingRequest() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
@@ -171,7 +171,7 @@ public class AsyncS3ClientTest {
                 .isEqualTo(amazonListing);
     }
 
-    @Test
+    @Test(enabled = false)
     public void shouldListObjectBatches() {
         // When & Then
         PublishSubject<ObjectListing> inProgressSubject = PublishSubject.create();
@@ -197,7 +197,7 @@ public class AsyncS3ClientTest {
                 .isNotTruncated();
     }
 
-    @Test
+    @Test(enabled = false)
     public void shouldListObjectBatchesWhenStartingWithARequest() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
@@ -219,7 +219,7 @@ public class AsyncS3ClientTest {
                 .isEqualTo(amazonListing).isNotTruncated();
     }
 
-    @Test
+    @Test(enabled = false)
     public void shouldListObjectWithMaxKeysLimit() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
@@ -239,7 +239,7 @@ public class AsyncS3ClientTest {
                 .hasSize(2);
     }
 
-    @Test
+    @Test(enabled = false)
     public void shouldListObjectBatchesWhenUsingRequest() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
@@ -266,7 +266,7 @@ public class AsyncS3ClientTest {
                 .isNotTruncated();
     }
 
-    @Test
+    @Test(enabled = false)
     public void shouldReturnEmptyListingWhenNotTruncated() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
@@ -289,7 +289,7 @@ public class AsyncS3ClientTest {
         assertThat(listing).isEqualTo(amazonListing).isNotNull();
     }
 
-    @Test
+    @Test(enabled = false)
     public void shouldListCommonPrefixes_ContainingFiles() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
@@ -308,7 +308,7 @@ public class AsyncS3ClientTest {
                 .isNotTruncated();
     }
 
-    @Test
+    @Test(enabled = false)
     public void shouldListCommonPrefixesInBatches_ContainingFiles() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
@@ -340,7 +340,7 @@ public class AsyncS3ClientTest {
                 .isNotTruncated();
     }
 
-    @Test
+    @Test(enabled = false)
     public void shouldListCommonPrefixes_ContainingDirectories() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
@@ -359,7 +359,7 @@ public class AsyncS3ClientTest {
                 .isNotTruncated();
     }
 
-    @Test
+    @Test(enabled = false)
     public void shouldListCommonPrefixesInBatches_ContainingDirectories() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
@@ -391,7 +391,7 @@ public class AsyncS3ClientTest {
                 .isNotTruncated();
     }
 
-    @Test
+    @Test(enabled = false)
     public void shouldPutObject() throws IOException {
         // Given
         String objectName = RandomStringUtils.randomAlphanumeric(55);
@@ -433,7 +433,7 @@ public class AsyncS3ClientTest {
         assertThat(actual).isEqualTo(data);
     }
 
-    @Test
+    @Test(enabled = false)
     public void shouldGetObject() {
         // Given
         String objectName = RandomStringUtils.randomAlphanumeric(55);
@@ -455,7 +455,7 @@ public class AsyncS3ClientTest {
         assertThat(actual).hasContentEqualTo(new ByteArrayInputStream(data));
     }
 
-    @Test
+    @Test(enabled = false)
     public void shouldDeleteObject() {
         // Given
         String objectName = RandomStringUtils.randomAlphanumeric(55);
