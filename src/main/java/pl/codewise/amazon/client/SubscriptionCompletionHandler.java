@@ -8,20 +8,19 @@ import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
+import io.reactivex.FlowableEmitter;
 import pl.codewise.amazon.client.xml.ErrorResponseParser;
 import pl.codewise.amazon.client.xml.GenericResponseParser;
-import rx.Observer;
-import rx.Subscriber;
 
 public class SubscriptionCompletionHandler<T> {
 
     private AtomicBoolean downstreamNotified = new AtomicBoolean();
-    private final Subscriber<? super T> subscriber;
+    private final FlowableEmitter<? super T> subscriber;
 
     private final GenericResponseParser<T> responseParser;
     private final ErrorResponseParser errorResponseParser;
 
-    SubscriptionCompletionHandler(Subscriber<? super T> subscriber, GenericResponseParser<T> responseParser, ErrorResponseParser errorResponseParser) {
+    SubscriptionCompletionHandler(FlowableEmitter<? super T> subscriber, GenericResponseParser<T> responseParser, ErrorResponseParser errorResponseParser) {
         this.subscriber = subscriber;
 
         this.responseParser = responseParser;
@@ -29,7 +28,7 @@ public class SubscriptionCompletionHandler<T> {
     }
 
     public void onSuccess(FullHttpResponse response) {
-        if (subscriber.isUnsubscribed() || !downstreamNotified.compareAndSet(false, true)) {
+        if (subscriber.isCancelled() || !downstreamNotified.compareAndSet(false, true)) {
             ReferenceCountUtil.release(response);
             return;
         }
@@ -41,7 +40,7 @@ public class SubscriptionCompletionHandler<T> {
                     subscriber.onNext(result.get());
                 }
 
-                subscriber.onCompleted();
+                subscriber.onComplete();
             } catch (Exception e) {
                 subscriber.onError(e);
             }
@@ -54,7 +53,7 @@ public class SubscriptionCompletionHandler<T> {
         }
     }
 
-    private boolean emitExceptionIfUnsuccessful(HttpResponseStatus status, ByteBuf content, Observer<?> observer) {
+    private boolean emitExceptionIfUnsuccessful(HttpResponseStatus status, ByteBuf content, FlowableEmitter<?> observer) {
         if (!status.equals(HttpResponseStatus.OK) && !status.equals(HttpResponseStatus.NO_CONTENT)) {
             try {
                 observer.onError(errorResponseParser.parse(status, content).get().build());

@@ -1,8 +1,8 @@
 package pl.codewise.amazon.client;
 
 import com.amazonaws.services.s3.model.ObjectListing;
+import io.reactivex.Flowable;
 import org.assertj.core.api.Assertions;
-import rx.Observable;
 
 public class AsyncS3ClientAssertions extends Assertions {
 
@@ -10,7 +10,7 @@ public class AsyncS3ClientAssertions extends Assertions {
 		return new ObjectListingAssert(objectListing);
 	}
 
-	public static ObjectListingAssert assertThat(Observable<ObjectListing> objectListing) {
-		return new ObjectListingAssert(objectListing.toBlocking().single());
+	public static ObjectListingAssert assertThat(Flowable<ObjectListing> objectListing) {
+		return new ObjectListingAssert(objectListing.blockingSingle());
 	}
 }

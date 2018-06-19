@@ -4,9 +4,12 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import rx.Observable;
-import rx.Subscriber;
-import rx.subjects.PublishSubject;
+import io.reactivex.FlowableEmitter;
+import io.reactivex.Observable;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Cancellable;
+import io.reactivex.subjects.PublishSubject;
+
 
 public class ListPerformanceTest {
 
@@ -28,14 +31,36 @@ public class ListPerformanceTest {
         ListObjectsRequest listing = new ListObjectsRequest()
                 .withBucketName("voluum-prod-data")
                 .withPrefix("+CLIENT_ID_CAMPAIGN_ID_TIME_HOUR_IP_NO_CONVERSIONS/2015/");
-        client.listObjects(listing, new Subscriber<ObjectListing>() {
+
+        client.listObjects(listing, new FlowableEmitter<ObjectListing>() {
             @Override
-            public void onCompleted() {
+            public void setDisposable(Disposable s) {
+
             }
 
             @Override
-            public void onError(Throwable e) {
-                subject.onError(e);
+            public void setCancellable(Cancellable c) {
+
+            }
+
+            @Override
+            public long requested() {
+                return 0;
+            }
+
+            @Override
+            public boolean isCancelled() {
+                return false;
+            }
+
+            @Override
+            public FlowableEmitter<ObjectListing> serialize() {
+                return null;
+            }
+
+            @Override
+            public boolean tryOnError(Throwable t) {
+                return false;
             }
 
             @Override
@@ -44,13 +69,23 @@ public class ListPerformanceTest {
                 if (objectListing.isTruncated()) {
                     client.listNextBatchOfObjects(objectListing, this);
                 } else {
-                    subject.onCompleted();
+                    subject.onComplete();
                 }
+            }
+
+            @Override
+            public void onError(Throwable error) {
+
+            }
+
+            @Override
+            public void onComplete() {
+
             }
         });
 
         subject
-                .flatMap(o -> Observable.from(o.getObjectSummaries()))
+                .flatMap(o -> Observable.fromIterable(o.getObjectSummaries()))
                 .map(S3ObjectSummary::getKey)
                 .subscribe(System.out::println, Throwable::printStackTrace, () -> System.out.println("Finished"));
     }
