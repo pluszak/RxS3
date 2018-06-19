@@ -20,7 +20,7 @@ general:
 
 deployment:
   production:
-    branch: master
+    branch: /.*?/
     commands:
       - chmod u+x gradlew
       - ./gradlew release
