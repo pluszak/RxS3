@@ -1,15 +1,14 @@
 package pl.codewise.amazon.client;
 
-import java.io.FilterInputStream;
-import java.io.IOException;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
-import io.netty.util.ReferenceCountUtil;
+
+import java.io.FilterInputStream;
 
 public class SizedInputStream extends FilterInputStream {
 
     private final ByteBuf content;
+    private boolean closed;
 
     public SizedInputStream(ByteBuf content) {
         super(new ByteBufInputStream(content));
@@ -19,11 +18,5 @@ public class SizedInputStream extends FilterInputStream {
 
     public int getContentLength() {
         return content.readableBytes();
-    }
-
-    @Override
-    public void close() throws IOException {
-        super.close();
-        ReferenceCountUtil.release(content);
     }
 }
