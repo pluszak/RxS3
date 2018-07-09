@@ -8,7 +8,6 @@ import java.io.FilterInputStream;
 public class SizedInputStream extends FilterInputStream {
 
     private final ByteBuf content;
-    private boolean closed;
 
     public SizedInputStream(ByteBuf content) {
         super(new ByteBufInputStream(content, true));
