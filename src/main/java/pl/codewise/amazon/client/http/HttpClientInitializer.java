@@ -6,7 +6,10 @@ import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.handler.timeout.ReadTimeoutHandler;
 import pl.codewise.amazon.client.InactiveConnectionsHandler;
+
+import java.util.concurrent.TimeUnit;
 
 class HttpClientInitializer {
 
@@ -14,9 +17,11 @@ class HttpClientInitializer {
     private static final int MAX_REQUEST_SIZE = 1200 * BYTES_IN_MEGABYTE;
 
     private final HandlerDemultiplexer demultiplexer;
+    private final int requestTimeoutMillis;
 
-    HttpClientInitializer(HandlerDemultiplexer demultiplexer) {
+    HttpClientInitializer(HandlerDemultiplexer demultiplexer, int requestTimeoutMillis) {
         this.demultiplexer = demultiplexer;
+        this.requestTimeoutMillis = requestTimeoutMillis;
     }
 
     void initChannel(Channel ch) {
@@ -26,6 +31,7 @@ class HttpClientInitializer {
         p.addLast(new HttpContentDecompressor());
         p.addLast(new HttpObjectAggregator(MAX_REQUEST_SIZE));
         p.addLast(demultiplexer);
+        p.addLast(new ReadTimeoutHandler(requestTimeoutMillis, TimeUnit.MILLISECONDS));
         p.addLast(new InactiveConnectionsHandler());
     }
 }

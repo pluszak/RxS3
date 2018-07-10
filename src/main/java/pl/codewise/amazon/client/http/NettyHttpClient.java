@@ -1,9 +1,5 @@
 package pl.codewise.amazon.client.http;
 
-import java.lang.reflect.Field;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
@@ -18,6 +14,10 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import pl.codewise.amazon.client.ClientConfiguration;
 import pl.codewise.amazon.client.SubscriptionCompletionHandler;
 import pl.codewise.amazon.client.auth.Operation;
+
+import java.lang.reflect.Field;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class NettyHttpClient implements AutoCloseable {
 
@@ -54,7 +54,7 @@ public class NettyHttpClient implements AutoCloseable {
 
         channelPool = new FixedChannelPool(bootstrap, new AbstractChannelPoolHandler() {
 
-            HttpClientInitializer initializer = new HttpClientInitializer(demultiplexer);
+            HttpClientInitializer initializer = new HttpClientInitializer(demultiplexer, configuration.getRequestTimeoutMillis());
 
             @Override
             public void channelCreated(Channel ch) {
