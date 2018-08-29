@@ -1,19 +1,22 @@
 package pl.codewise.amazon.client.http;
 
 import java.lang.reflect.Field;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.netflix.concurrency.limits.Limiter;
+import com.netflix.concurrency.limits.limit.TracingLimitDecorator;
+import com.netflix.concurrency.limits.limit.VegasLimit;
+import com.netflix.concurrency.limits.limiter.DefaultLimiter;
+import com.netflix.concurrency.limits.strategy.SimpleStrategy;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.pool.AbstractChannelPoolHandler;
-import io.netty.channel.pool.ChannelHealthChecker;
-import io.netty.channel.pool.ChannelPool;
-import io.netty.channel.pool.FixedChannelPool;
+import io.netty.channel.pool.*;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import pl.codewise.amazon.client.ClientConfiguration;
 import pl.codewise.amazon.client.SubscriptionCompletionHandler;
@@ -26,6 +29,8 @@ public class NettyHttpClient implements AutoCloseable {
 
     private final HandlerDemultiplexer demultiplexer;
     private final ChannelPool channelPool;
+    private final Limiter<Void> limiter;
+    private final SimpleStrategy<Void> simpleStrategy = new SimpleStrategy<>();
 
     public NettyHttpClient(ClientConfiguration configuration) {
         ThreadGroup threadGroup = new ThreadGroup("Netty RxS3 client");
@@ -52,7 +57,7 @@ public class NettyHttpClient implements AutoCloseable {
                 .channel(NioSocketChannel.class)
                 .remoteAddress(s3Location, port);
 
-        channelPool = new FixedChannelPool(bootstrap, new AbstractChannelPoolHandler() {
+        channelPool = new SimpleChannelPool(bootstrap, new AbstractChannelPoolHandler() {
 
             HttpClientInitializer initializer = new HttpClientInitializer(demultiplexer);
 
@@ -60,8 +65,9 @@ public class NettyHttpClient implements AutoCloseable {
             public void channelCreated(Channel ch) {
                 initializer.initChannel(ch);
             }
-        }, ChannelHealthChecker.ACTIVE, FixedChannelPool.AcquireTimeoutAction.FAIL,
-                configuration.getAcquireTimeoutMillis(), configuration.getMaxConnections(), configuration.getMaxPendingAcquires());
+        });
+
+        limiter = DefaultLimiter.newBuilder().limit(TracingLimitDecorator.wrap(VegasLimit.newBuilder().initialLimit(configuration.getMaxConnections()).build())).build(simpleStrategy);
     }
 
     public Request prepareGet(String url) {
@@ -81,7 +87,8 @@ public class NettyHttpClient implements AutoCloseable {
     }
 
     public <T> void executeRequest(Request requestData, SubscriptionCompletionHandler<T> completionHandler) {
-        channelPool.acquire().addListener(new RequestSender(s3Location, requestData, completionHandler, demultiplexer, channelPool));
+        Limiter.Listener token = limiter.acquire(null).orElseThrow(() -> new RejectedExecutionException("Reject execution, operations under limit"));;
+        channelPool.acquire().addListener(new RequestSender(s3Location, requestData, completionHandler, demultiplexer, channelPool, token));
     }
 
     @Override
@@ -92,10 +99,10 @@ public class NettyHttpClient implements AutoCloseable {
 
     public int acquiredConnections() {
         try {
-            Field acquiredChannelCount = FixedChannelPool.class.getDeclaredField("acquiredChannelCount");
-            acquiredChannelCount.setAccessible(true);
+            Field busy = SimpleStrategy.class.getDeclaredField("busy");
+            busy.setAccessible(true);
 
-            return (int) acquiredChannelCount.get(channelPool);
+            return ((AtomicInteger) busy.get(simpleStrategy)).get();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

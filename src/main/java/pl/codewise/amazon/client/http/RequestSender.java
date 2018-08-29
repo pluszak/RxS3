@@ -1,5 +1,6 @@
 package pl.codewise.amazon.client.http;
 
+import com.netflix.concurrency.limits.Limiter;
 import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -22,23 +23,27 @@ class RequestSender implements FutureListener<Channel> {
 
     private final Request requestData;
     private final SubscriptionCompletionHandler completionHandler;
+    private final Limiter.Listener token;
 
-    RequestSender(String s3Location, Request requestData, SubscriptionCompletionHandler completionHandler, HandlerDemultiplexer demultiplexer, ChannelPool channelPool) {
+    RequestSender(String s3Location, Request requestData, SubscriptionCompletionHandler completionHandler, HandlerDemultiplexer demultiplexer, ChannelPool channelPool, Limiter.Listener token) {
         this.s3Location = s3Location;
         this.requestData = requestData;
         this.completionHandler = completionHandler;
         this.demultiplexer = demultiplexer;
         this.channelPool = channelPool;
+        this.token = token;
     }
 
     @Override
     public void operationComplete(Future<Channel> future) {
         if (!future.isSuccess()) {
+            token.onIgnore();
             completionHandler.onError(future.cause());
         } else {
             try {
                 executeRequest(future.getNow(), requestData);
             } catch (Exception e) {
+                token.onIgnore();
                 completionHandler.onError(e);
             }
         }
@@ -64,7 +69,7 @@ class RequestSender implements FutureListener<Channel> {
         requestData.getSignatureCalculatorFactory().getSignatureCalculator()
                 .calculateAndAddSignature(request.headers(), requestData);
 
-        HttpClientHandler httpClientHandler = new HttpClientHandler(channelPool, completionHandler);
+        HttpClientHandler httpClientHandler = new HttpClientHandler(channelPool, completionHandler, token);
         demultiplexer.setAttributeValue(channel, httpClientHandler);
         channel.writeAndFlush(request)
                 .addListener(writeFuture -> {

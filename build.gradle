@@ -36,6 +36,7 @@ dependencies {
     }
 
     compile group: 'io.netty', name: 'netty-all', version: '4.0.44.Final'
+    compile group: 'com.netflix.concurrency-limits', name: 'concurrency-limits-core', version: '0.0.49'
 
     compile group: 'io.reactivex.rxjava2', name: 'rxjava', version: '2.1.14'
     compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.3.2'

@@ -2,6 +2,7 @@ package pl.codewise.amazon.client.http;
 
 import java.io.IOException;
 
+import com.netflix.concurrency.limits.Limiter;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.pool.ChannelPool;
@@ -14,15 +15,18 @@ class HttpClientHandler {
 
     private final ChannelPool channelPool;
     private final SubscriptionCompletionHandler completionHandler;
+    private final Limiter.Listener token;
 
     private boolean channelReleased;
 
-    HttpClientHandler(ChannelPool channelPool, SubscriptionCompletionHandler completionHandler) {
+    HttpClientHandler(ChannelPool channelPool, SubscriptionCompletionHandler completionHandler, Limiter.Listener token) {
         this.channelPool = channelPool;
         this.completionHandler = completionHandler;
+        this.token = token;
     }
 
     void channelRead(ChannelHandlerContext ctx, FullHttpResponse msg) {
+        token.onSuccess();
         if (!HttpHeaders.isKeepAlive(msg)) {
             ctx.close();
         }
@@ -37,6 +41,7 @@ class HttpClientHandler {
         channel.close();
 
         if (!channelReleased) {
+            token.onDropped();
             channelReleased = true;
             channelPool.release(channel);
         }
@@ -46,6 +51,7 @@ class HttpClientHandler {
 
     void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (!channelReleased) {
+            token.onDropped();
             channelReleased = true;
             channelPool.release(ctx.channel());
         }
