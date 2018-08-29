@@ -204,7 +204,7 @@ public class AsyncS3Client implements Closeable {
     }
 
     private <T> void retrieveResult(Request request, GenericResponseParser<T> responseParser, FlowableEmitter<? super  T> observer) {
-        httpClient.executeRequest(request, new SubscriptionCompletionHandler<>(observer, responseParser, errorResponseParser));
+        httpClient.executeRequest(request, new SubscriptionCompletionHandler<>(observer, request, responseParser, errorResponseParser));
     }
 
     private <T> Flowable<T> retrieveResult(Request request, GenericResponseParser<T> responseParser) {
