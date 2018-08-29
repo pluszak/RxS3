@@ -1,14 +1,16 @@
 package pl.codewise.amazon.client;
 
-import java.io.Closeable;
-
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.reactivex.*;
+import io.reactivex.BackpressureStrategy;
+import io.reactivex.Flowable;
+import io.reactivex.FlowableEmitter;
 import javolution.text.TextBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 import pl.codewise.amazon.client.auth.AWSSignatureCalculatorFactory;
@@ -17,6 +19,8 @@ import pl.codewise.amazon.client.http.Request;
 import pl.codewise.amazon.client.utils.TextBuilders;
 import pl.codewise.amazon.client.utils.UTF8UrlEncoder;
 import pl.codewise.amazon.client.xml.*;
+
+import java.io.Closeable;
 
 import static pl.codewise.amazon.client.RestUtils.appendQueryString;
 
@@ -27,6 +31,8 @@ import static pl.codewise.amazon.client.RestUtils.appendQueryString;
  */
 @SuppressWarnings("UnusedDeclaration")
 public class AsyncS3Client implements Closeable {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AsyncS3Client.class);
 
     private final NettyHttpClient httpClient;
 
@@ -203,8 +209,11 @@ public class AsyncS3Client implements Closeable {
         httpClient.close();
     }
 
-    private <T> void retrieveResult(Request request, GenericResponseParser<T> responseParser, FlowableEmitter<? super  T> observer) {
-        httpClient.executeRequest(request, new SubscriptionCompletionHandler<>(observer, request, responseParser, errorResponseParser));
+    private <T> void retrieveResult(Request request, GenericResponseParser<T> responseParser, FlowableEmitter<? super T> observer) {
+        SubscriptionCompletionHandler<T> completionHandler = new SubscriptionCompletionHandler<>(observer, request, responseParser, errorResponseParser);
+        observer.setCancellable(() -> LOGGER.error("Cancelled request {}", request.getUrl()));
+
+        httpClient.executeRequest(request, completionHandler);
     }
 
     private <T> Flowable<T> retrieveResult(Request request, GenericResponseParser<T> responseParser) {

@@ -32,7 +32,7 @@ class RequestSender implements FutureListener<Channel> {
     }
 
     @Override
-    public void operationComplete(Future<Channel> future) throws Exception {
+    public void operationComplete(Future<Channel> future) {
         if (!future.isSuccess()) {
             completionHandler.onError(future.cause());
         } else {
@@ -44,7 +44,7 @@ class RequestSender implements FutureListener<Channel> {
         }
     }
 
-    private void executeRequest(Channel channel, Request requestData) throws Exception {
+    private void executeRequest(Channel channel, Request requestData) {
         DefaultFullHttpRequest request;
         if (requestData.getOperation().equals(Operation.PUT)) {
             request = new DefaultFullHttpRequest(
