@@ -59,8 +59,9 @@ public class SubscriptionCompletionHandler<T> {
         if (downstreamNotified.compareAndSet(false, true)) {
             if (subscriber.isCancelled()) {
                 LOGGER.error("Failed reqeust: {}", request.getUrl());
+            } else {
+                subscriber.onError(t);
             }
-            subscriber.onError(t);
         }
     }
 
@@ -76,5 +77,11 @@ public class SubscriptionCompletionHandler<T> {
         }
 
         return false;
+    }
+
+    public void cancel() {
+        if (!downstreamNotified.get()) {
+            LOGGER.error("Cancelled request {}", request.getUrl());
+        }
     }
 }

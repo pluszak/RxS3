@@ -211,7 +211,7 @@ public class AsyncS3Client implements Closeable {
 
     private <T> void retrieveResult(Request request, GenericResponseParser<T> responseParser, FlowableEmitter<? super T> observer) {
         SubscriptionCompletionHandler<T> completionHandler = new SubscriptionCompletionHandler<>(observer, request, responseParser, errorResponseParser);
-        observer.setCancellable(() -> LOGGER.error("Cancelled request {}", request.getUrl()));
+        observer.setCancellable(completionHandler::cancel);
 
         httpClient.executeRequest(request, completionHandler);
     }
