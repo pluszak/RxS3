@@ -53,7 +53,7 @@ public class SubscriptionCompletionHandler<T> {
     public void onError(Throwable t) {
         if (downstreamNotified.compareAndSet(false, true)) {
             if (subscriber.isDisposed()) {
-                LOGGER.error("Failed reqeust: {}", request.getUrl());
+                LOGGER.error("Failed request: {}", request.getUrl());
             } else {
                 subscriber.onError(t);
             }
