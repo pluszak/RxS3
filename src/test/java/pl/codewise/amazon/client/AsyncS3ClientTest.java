@@ -9,6 +9,10 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.googlecode.catchexception.CatchException;
 import com.jayway.awaitility.Awaitility;
 import com.jayway.awaitility.Duration;
+import io.reactivex.Completable;
+import io.reactivex.Single;
+import io.reactivex.observers.TestObserver;
+import io.reactivex.subjects.PublishSubject;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
@@ -16,11 +20,6 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
 import org.testng.annotations.*;
-import rx.Observable;
-import rx.Subscriber;
-import rx.functions.Func1;
-import rx.observers.TestSubscriber;
-import rx.subjects.PublishSubject;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -133,7 +132,7 @@ public class AsyncS3ClientTest {
     @Test(enabled = false)
     public void shouldListObjectsInBucket() {
         // When
-        Observable<ObjectListing> listing = client.listObjects(bucketName);
+        Single<ObjectListing> listing = client.listObjects(bucketName);
         ObjectListing amazonListing = amazonS3Client.listObjects(bucketName);
 
         // Then
@@ -145,7 +144,7 @@ public class AsyncS3ClientTest {
     @Test(enabled = false)
     public void shouldListObjects() {
         // When
-        Observable<ObjectListing> listing = client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/");
+        Single<ObjectListing> listing = client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/");
         ObjectListing amazonListing = amazonS3Client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/");
 
         // Then
@@ -162,7 +161,7 @@ public class AsyncS3ClientTest {
         request.setPrefix("COUNTRY_BY_DATE/2014/05/");
 
         // When
-        Observable<ObjectListing> listing = client.listObjects(request);
+        Single<ObjectListing> listing = client.listObjects(request);
         ObjectListing amazonListing = amazonS3Client.listObjects(request);
 
         // Then
@@ -177,21 +176,24 @@ public class AsyncS3ClientTest {
         PublishSubject<ObjectListing> inProgressSubject = PublishSubject.create();
         PublishSubject<ObjectListing> completedSubject = PublishSubject.create();
 
-        Observable<ObjectListing> listing = Observable.unsafeCreate((Subscriber<? super ObjectListing> subscriber) -> client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/05/", subscriber));
+        Single<ObjectListing> listing = client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/05/");
         ObjectListing amazonListing = amazonS3Client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/05/");
 
         inProgressSubject.subscribe(objectListing -> {
             completedSubject.onNext(objectListing);
             if (!objectListing.isTruncated()) {
-                completedSubject.onCompleted();
+                completedSubject.onComplete();
             } else {
                 client.listNextBatchOfObjects(objectListing).subscribe(inProgressSubject::onNext);
             }
-        }, completedSubject::onError, completedSubject::onCompleted);
+        }, completedSubject::onError, completedSubject::onComplete);
 
-        listing.subscribe(inProgressSubject);
+        listing.subscribe(t -> {
+            inProgressSubject.onNext(t);
+            inProgressSubject.onComplete();
+        }, inProgressSubject::onError);
 
-        assertThat(completedSubject)
+        assertThat(completedSubject.blockingFirst())
                 .ignoreFields(fieldsToIgnore)
                 .isEqualTo(amazonListing)
                 .isNotTruncated();
@@ -205,12 +207,12 @@ public class AsyncS3ClientTest {
         request.setPrefix("COUNTRY_BY_DATE/2014/06/");
 
         // When & Then
-        Observable<ObjectListing> listing = client.listObjects(request);
+        Single<ObjectListing> listing = client.listObjects(request);
         ObjectListing amazonListing = amazonS3Client.listObjects(request);
 
         while (amazonListing.isTruncated()) {
             assertThat(listing).isEqualTo(amazonListing);
-            listing = client.listNextBatchOfObjects(listing.toBlocking().single());
+            listing = client.listNextBatchOfObjects(listing.blockingGet());
             amazonListing = amazonS3Client.listNextBatchOfObjects(amazonListing);
         }
 
@@ -228,7 +230,7 @@ public class AsyncS3ClientTest {
         request.setMaxKeys(2);
 
         // When
-        Observable<ObjectListing> listing = client.listObjects(request);
+        Single<ObjectListing> listing = client.listObjects(request);
         ObjectListing amazonListing = amazonS3Client.listObjects(request);
 
         // Then
@@ -248,7 +250,7 @@ public class AsyncS3ClientTest {
         request.setPrefix("COUNTRY_BY_DATE/2014/");
 
         // When & Then
-        Observable<ObjectListing> listing = client.listObjects(request);
+        Single<ObjectListing> listing = client.listObjects(request);
         ObjectListing amazonListing = amazonS3Client.listObjects(request);
 
         while (amazonListing.isTruncated()) {
@@ -256,7 +258,7 @@ public class AsyncS3ClientTest {
                     .ignoreFields(fieldsToIgnore)
                     .isEqualTo(amazonListing);
 
-            listing = client.listNextBatchOfObjects(listing.toBlocking().single());
+            listing = client.listNextBatchOfObjects(listing.blockingGet());
             amazonListing = amazonS3Client.listNextBatchOfObjects(amazonListing);
         }
 
@@ -273,7 +275,7 @@ public class AsyncS3ClientTest {
         request.setBucketName(bucketName);
         request.setPrefix("COUNTRY_BY_DATE/2014/");
 
-        Observable<ObjectListing> listing = client.listObjects(request);
+        Single<ObjectListing> listing = client.listObjects(request);
         ObjectListing amazonListing = amazonS3Client.listObjects(request);
 
         assertThat(listing)
@@ -282,7 +284,7 @@ public class AsyncS3ClientTest {
                 .isNotTruncated();
 
         // When
-        listing = client.listNextBatchOfObjects(listing.toBlocking().single());
+        listing = client.listNextBatchOfObjects(listing.blockingGet());
         amazonListing = amazonS3Client.listNextBatchOfObjects(amazonListing);
 
         // Then
@@ -298,7 +300,7 @@ public class AsyncS3ClientTest {
         request.setDelimiter("/");
 
         // When
-        Observable<ObjectListing> listing = client.listObjects(request);
+        Single<ObjectListing> listing = client.listObjects(request);
         ObjectListing amazonListing = amazonS3Client.listObjects(request);
 
         // Then
@@ -319,11 +321,11 @@ public class AsyncS3ClientTest {
 
         // When
         ObjectListing amazonListing = amazonS3Client.listObjects(request);
-        Observable<ObjectListing> listing = client.listObjects(request);
+        Single<ObjectListing> listing = client.listObjects(request);
 
         // Then
         while (amazonListing.isTruncated()) {
-            ObjectListing objectListing = listing.toBlocking().single();
+            ObjectListing objectListing = listing.blockingGet();
 
             assertThat(objectListing)
                     .ignoreFields(fieldsToIgnore)
@@ -349,7 +351,7 @@ public class AsyncS3ClientTest {
         request.setDelimiter("/");
 
         // When
-        Observable<ObjectListing> listing = client.listObjects(request);
+        Single<ObjectListing> listing = client.listObjects(request);
         ObjectListing amazonListing = amazonS3Client.listObjects(request);
 
         // Then
@@ -369,12 +371,12 @@ public class AsyncS3ClientTest {
         request.setDelimiter("/");
 
         // When
-        Observable<ObjectListing> listing = client.listObjects(request);
+        Single<ObjectListing> listing = client.listObjects(request);
         ObjectListing amazonListing = amazonS3Client.listObjects(request);
 
         // Then
         while (amazonListing.isTruncated()) {
-            ObjectListing objectListing = listing.toBlocking().single();
+            ObjectListing objectListing = listing.blockingGet();
 
             assertThat(objectListing)
                     .ignoreFields(fieldsToIgnore)
@@ -402,30 +404,26 @@ public class AsyncS3ClientTest {
         metadata.setContentType("application/octet-stream");
         metadata.setContentMD5(getBase64EncodedMD5Hash(data));
 
-        TestSubscriber<Object> subscriber1 = new TestSubscriber<>();
-        TestSubscriber<Object> subscriber2 = new TestSubscriber<>();
-        TestSubscriber<Object> subscriber3 = new TestSubscriber<>();
-
         // When
-        Observable<?> observable = client.putObject(bucketName, objectName, data, metadata);
-        observable.subscribe(subscriber1);
+        Completable completable = client.putObject(bucketName, objectName, data, metadata);
 
         // Then
+        TestObserver<?> subscriber1 = completable.test();
         subscriber1.awaitTerminalEvent();
-        subscriber1.assertCompleted();
-        subscriber1.assertNoValues();
+        subscriber1.assertNoErrors();
+        subscriber1.assertComplete();
 
-        observable.subscribe(subscriber2);
+        TestObserver<?> subscriber2 = completable.test();
 
         subscriber2.awaitTerminalEvent();
-        subscriber2.assertCompleted();
-        subscriber2.assertNoValues();
+        subscriber2.assertNoErrors();
+        subscriber2.assertComplete();
 
-        observable.subscribe(subscriber3);
+        TestObserver<?> subscriber3 = completable.test();
 
         subscriber3.awaitTerminalEvent();
-        subscriber3.assertCompleted();
-        subscriber3.assertNoValues();
+        subscriber3.assertNoErrors();
+        subscriber3.assertComplete();
 
         S3Object object = amazonS3Client.getObject(bucketName, objectName);
         byte[] actual = IOUtils.toByteArray(object.getObjectContent());
@@ -448,8 +446,7 @@ public class AsyncS3ClientTest {
 
         // When
         InputStream actual = client.getObject(bucketName, objectName)
-                .toBlocking()
-                .single();
+                .blockingGet();
 
         // Then
         assertThat(actual).hasContentEqualTo(new ByteArrayInputStream(data));
@@ -470,8 +467,7 @@ public class AsyncS3ClientTest {
 
         // When
         client.deleteObject(bucketName, objectName)
-                .toBlocking()
-                .singleOrDefault(null);
+                .blockingAwait();
 
         // Then
         CatchException.catchException(amazonS3Client).getObject(bucketName, objectName);
@@ -481,18 +477,5 @@ public class AsyncS3ClientTest {
     private String getBase64EncodedMD5Hash(byte[] packet) {
         byte[] digest = DigestUtils.md5(packet);
         return new String(Base64.encodeBase64(digest));
-    }
-
-    private Func1<ObjectListing, Observable<? extends ObjectListing>> continueIfTruncated(AsyncS3Client asyncS3Client) {
-        return listing -> {
-            if (listing.isTruncated()) {
-                Observable<ObjectListing> observable = asyncS3Client.listNextBatchOfObjects(listing)
-                        .flatMap(continueIfTruncated(asyncS3Client));
-
-                return Observable.just(listing).concatWith(observable);
-            }
-
-            return Observable.just(listing);
-        };
     }
 }
