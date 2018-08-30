@@ -1,8 +1,5 @@
 package pl.codewise.amazon.client.xml;
 
-import java.io.IOException;
-import java.util.Optional;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
@@ -20,8 +17,8 @@ public class DiscardBytesParser extends GenericResponseParser<Object> {
     }
 
     @Override
-    public Optional<Object> parse(HttpResponseStatus status, ByteBuf content) throws IOException {
+    public Object parse(HttpResponseStatus status, ByteBuf content) {
         ReferenceCountUtil.release(content);
-        return Optional.empty();
+        return this;
     }
 }

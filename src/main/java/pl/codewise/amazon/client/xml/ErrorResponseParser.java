@@ -1,9 +1,5 @@
 package pl.codewise.amazon.client.xml;
 
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.util.Optional;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -12,6 +8,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xmlpull.v1.XmlPullParserFactory;
 import pl.codewise.amazon.client.xml.handlers.ErrorTagHandler;
+
+import java.io.IOException;
+import java.nio.charset.Charset;
 
 public class ErrorResponseParser extends GenericResponseParser<AmazonS3ExceptionBuilder> {
 
@@ -33,10 +32,9 @@ public class ErrorResponseParser extends GenericResponseParser<AmazonS3Exception
         return exceptionBuilder;
     }
 
-    public Optional<AmazonS3ExceptionBuilder> parse(HttpResponseStatus status, ByteBuf content) throws IOException {
+    public AmazonS3ExceptionBuilder parse(HttpResponseStatus status, ByteBuf content) throws IOException {
         try {
-            AmazonS3ExceptionBuilder response = parseResponse(status, content);
-            return Optional.of(response);
+            return parseResponse(status, content);
         } finally {
             ReferenceCountUtil.release(content);
         }

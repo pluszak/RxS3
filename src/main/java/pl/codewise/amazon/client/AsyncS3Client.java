@@ -5,9 +5,9 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.reactivex.BackpressureStrategy;
-import io.reactivex.Flowable;
-import io.reactivex.FlowableEmitter;
+import io.reactivex.Completable;
+import io.reactivex.Single;
+import io.reactivex.SingleEmitter;
 import javolution.text.TextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,14 +41,7 @@ public class AsyncS3Client implements Closeable {
 
     private final AWSSignatureCalculatorFactory signatureCalculatorFactory;
 
-    private final BackpressureStrategy backpressureStrategy;
-
     public AsyncS3Client(ClientConfiguration configuration, NettyHttpClient httpClient) {
-        this(configuration, httpClient, BackpressureStrategy.MISSING);
-    }
-
-    public AsyncS3Client(ClientConfiguration configuration, NettyHttpClient httpClient, BackpressureStrategy backpressureStrategy) {
-        this.backpressureStrategy = backpressureStrategy;
         this.httpClient = httpClient;
 
         try {
@@ -72,11 +65,11 @@ public class AsyncS3Client implements Closeable {
         return httpClient.acquiredConnections();
     }
 
-    public Flowable<?> putObject(String bucketName, CharSequence key, byte[] data, ObjectMetadata metadata) {
-        return putObject(bucketName, key, Unpooled.wrappedBuffer(data), metadata);
+    public Completable putObject(String bucketName, CharSequence key, byte[] data, ObjectMetadata metadata) {
+        return putObject(bucketName, key, Unpooled.wrappedBuffer(data), metadata).ignoreElement();
     }
 
-    public Flowable<?> putObject(String bucketName, CharSequence key, ByteBuf data, ObjectMetadata metadata) {
+    public Single<?> putObject(String bucketName, CharSequence key, ByteBuf data, ObjectMetadata metadata) {
         TextBuilder urlBuilder = TextBuilders.threadLocal();
         urlBuilder.append("/")
                 .append(key);
@@ -93,15 +86,15 @@ public class AsyncS3Client implements Closeable {
         return retrieveResult(request, DiscardBytesParser.getInstance());
     }
 
-    public void listObjects(String bucketName, FlowableEmitter<ObjectListing> subscriber) {
+    public void listObjects(String bucketName, SingleEmitter<ObjectListing> subscriber) {
         listObjects(bucketName, null, subscriber);
     }
 
-    public Flowable<ObjectListing> listObjects(String bucketName) {
+    public Single<ObjectListing> listObjects(String bucketName) {
         return listObjects(bucketName, (String) null);
     }
 
-    public void listObjects(String bucketName, CharSequence prefix, FlowableEmitter<? super ObjectListing> subscriber) {
+    private void listObjects(String bucketName, CharSequence prefix, SingleEmitter<? super ObjectListing> subscriber) {
         TextBuilder urlBuilder = TextBuilders.threadLocal();
         urlBuilder.append("/?");
         appendQueryString(urlBuilder, prefix, null, null, null);
@@ -114,11 +107,11 @@ public class AsyncS3Client implements Closeable {
         retrieveResult(request, listResponseParser, subscriber);
     }
 
-    public Flowable<ObjectListing> listObjects(String bucketName, CharSequence prefix) {
-        return Flowable.create(subscriber -> listObjects(bucketName, prefix, subscriber), backpressureStrategy);
+    public Single<ObjectListing> listObjects(String bucketName, CharSequence prefix) {
+        return Single.create(subscriber -> listObjects(bucketName, prefix, subscriber));
     }
 
-    public void listNextBatchOfObjects(ObjectListing objectListing, FlowableEmitter<ObjectListing> observable) {
+    private void listNextBatchOfObjects(ObjectListing objectListing, SingleEmitter<ObjectListing> observable) {
         if (!objectListing.isTruncated()) {
             ObjectListing emptyListing = new ObjectListing();
             emptyListing.setBucketName(objectListing.getBucketName());
@@ -128,8 +121,7 @@ public class AsyncS3Client implements Closeable {
             emptyListing.setPrefix(objectListing.getPrefix());
             emptyListing.setTruncated(false);
 
-            observable.onNext(objectListing);
-            observable.onComplete();
+            observable.onSuccess(objectListing);
         }
 
         listObjects(new ListObjectsRequest(
@@ -140,7 +132,7 @@ public class AsyncS3Client implements Closeable {
                 objectListing.getMaxKeys()), observable);
     }
 
-    public Flowable<ObjectListing> listNextBatchOfObjects(ObjectListing objectListing) {
+    public Single<ObjectListing> listNextBatchOfObjects(ObjectListing objectListing) {
         if (!objectListing.isTruncated()) {
             ObjectListing emptyListing = new ObjectListing();
             emptyListing.setBucketName(objectListing.getBucketName());
@@ -150,7 +142,7 @@ public class AsyncS3Client implements Closeable {
             emptyListing.setPrefix(objectListing.getPrefix());
             emptyListing.setTruncated(false);
 
-            return Flowable.just(emptyListing);
+            return Single.just(emptyListing);
         }
 
         return listObjects(new ListObjectsRequest(
@@ -161,7 +153,7 @@ public class AsyncS3Client implements Closeable {
                 objectListing.getMaxKeys()));
     }
 
-    public void listObjects(ListObjectsRequest listObjectsRequest, FlowableEmitter<? super ObjectListing> observer) {
+    private void listObjects(ListObjectsRequest listObjectsRequest, SingleEmitter<? super ObjectListing> observer) {
         TextBuilder urlBuilder = TextBuilders.threadLocal();
         urlBuilder.append("/?");
         appendQueryString(urlBuilder, listObjectsRequest);
@@ -174,11 +166,11 @@ public class AsyncS3Client implements Closeable {
         retrieveResult(request, listResponseParser, observer);
     }
 
-    public Flowable<ObjectListing> listObjects(ListObjectsRequest listObjectsRequest) {
-        return Flowable.create(subscriber -> listObjects(listObjectsRequest, subscriber), backpressureStrategy);
+    public Single<ObjectListing> listObjects(ListObjectsRequest listObjectsRequest) {
+        return Single.create(subscriber -> listObjects(listObjectsRequest, subscriber));
     }
 
-    public Flowable<SizedInputStream> getObject(String bucketName, CharSequence location) {
+    public Single<SizedInputStream> getObject(String bucketName, CharSequence location) {
         TextBuilder urlBuilder = TextBuilders.threadLocal();
         urlBuilder.append("/");
         UTF8UrlEncoder.appendEncoded(urlBuilder, location);
@@ -191,7 +183,7 @@ public class AsyncS3Client implements Closeable {
         return retrieveResult(request, ConsumeBytesParser.getInstance());
     }
 
-    public Flowable<?> deleteObject(String bucketName, CharSequence location) {
+    public Completable deleteObject(String bucketName, CharSequence location) {
         TextBuilder urlBuilder = TextBuilders.threadLocal();
         urlBuilder.append("/");
         UTF8UrlEncoder.appendEncoded(urlBuilder, location);
@@ -201,7 +193,7 @@ public class AsyncS3Client implements Closeable {
                 .setSignatureCalculatorFactory(signatureCalculatorFactory)
                 .build();
 
-        return retrieveResult(request, DiscardBytesParser.getInstance());
+        return retrieveResult(request, DiscardBytesParser.getInstance()).ignoreElement();
     }
 
     @Override
@@ -209,14 +201,14 @@ public class AsyncS3Client implements Closeable {
         httpClient.close();
     }
 
-    private <T> void retrieveResult(Request request, GenericResponseParser<T> responseParser, FlowableEmitter<? super T> observer) {
+    private <T> void retrieveResult(Request request, GenericResponseParser<T> responseParser, SingleEmitter<? super T> observer) {
         SubscriptionCompletionHandler<T> completionHandler = new SubscriptionCompletionHandler<>(observer, request, responseParser, errorResponseParser);
         observer.setCancellable(completionHandler::cancel);
 
         httpClient.executeRequest(request, completionHandler);
     }
 
-    private <T> Flowable<T> retrieveResult(Request request, GenericResponseParser<T> responseParser) {
-        return Flowable.create(emitter -> retrieveResult(request, responseParser, emitter), backpressureStrategy);
+    private <T> Single<T> retrieveResult(Request request, GenericResponseParser<T> responseParser) {
+        return Single.create(emitter -> retrieveResult(request, responseParser, emitter));
     }
 }

@@ -1,11 +1,5 @@
 package pl.codewise.amazon.client.xml;
 
-import java.io.IOException;
-import java.util.EnumSet;
-import java.util.Map;
-import java.util.Optional;
-import java.util.function.Function;
-
 import com.amazonaws.services.s3.model.ObjectListing;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
@@ -16,6 +10,11 @@ import pl.codewise.amazon.client.ClientConfiguration;
 import pl.codewise.amazon.client.xml.handlers.ListObjectsTagHandler;
 import pl.codewise.amazon.client.xml.handlers.TagHandler;
 
+import java.io.IOException;
+import java.util.EnumSet;
+import java.util.Map;
+import java.util.function.Function;
+
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.toMap;
 
@@ -25,7 +24,7 @@ public class ListResponseParser extends GenericResponseParser<ObjectListing> {
         super(pullParserFactory, ListObjectsTagHandler.UNKNOWN, tagHandlerMap);
     }
 
-    public Optional<ObjectListing> parse(HttpResponseStatus status, ByteBuf content) throws IOException {
+    public ObjectListing parse(HttpResponseStatus status, ByteBuf content) throws IOException {
         try {
             ObjectListing listing = new ObjectListing();
             parse(new ByteBufInputStream(content), listing);
@@ -34,7 +33,7 @@ public class ListResponseParser extends GenericResponseParser<ObjectListing> {
                 listing.setNextMarker(null);
             }
 
-            return Optional.of(listing);
+            return listing;
         } finally {
             ReferenceCountUtil.release(content);
         }
