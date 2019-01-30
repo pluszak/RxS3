@@ -1,12 +1,9 @@
 package pl.codewise.amazon.client.http;
 
-import java.lang.reflect.Field;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -18,6 +15,10 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import pl.codewise.amazon.client.ClientConfiguration;
 import pl.codewise.amazon.client.SubscriptionCompletionHandler;
 import pl.codewise.amazon.client.auth.Operation;
+
+import java.lang.reflect.Field;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class NettyHttpClient implements AutoCloseable {
 
@@ -36,9 +37,11 @@ public class NettyHttpClient implements AutoCloseable {
         String[] s3LocationArray = configuration.getS3Location().trim().split(":");
 
         s3Location = s3LocationArray[0];
-        int port = 80;
+        int port;
         if (s3LocationArray.length == 2) {
             port = Integer.parseInt(s3LocationArray[1]);
+        } else {
+            port = 80;
         }
 
         demultiplexer = new HandlerDemultiplexer();
@@ -61,7 +64,13 @@ public class NettyHttpClient implements AutoCloseable {
                 initializer.initChannel(ch);
             }
         }, ChannelHealthChecker.ACTIVE, FixedChannelPool.AcquireTimeoutAction.FAIL,
-                configuration.getAcquireTimeoutMillis(), configuration.getMaxConnections(), configuration.getMaxPendingAcquires());
+                configuration.getAcquireTimeoutMillis(), configuration.getMaxConnections(), configuration.getMaxPendingAcquires()) {
+            @Override
+            protected ChannelFuture connectChannel(Bootstrap bs) {
+                bs.remoteAddress(s3Location, port);
+                return super.connectChannel(bs);
+            }
+        };
     }
 
     public Request prepareGet(String url) {
