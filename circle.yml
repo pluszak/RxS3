@@ -5,43 +5,44 @@ jobs:
       _JAVA_OPTIONS: "-Xmx3g"
       GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
 
-  docker:
-    - image: circleci/openjdk:8u242-jdk
-    - image: minio/minio
-      environment:
-        MINIO_ACCESS_KEY: access_key
-        MINIO_SECRET_KEY: ecret_key
+    docker:
+      - image: circleci/openjdk:8u242-jdk
+      - image: minio/minio
+        environment:
+          MINIO_ACCESS_KEY: access_key
+          MINIO_SECRET_KEY: ecret_key
 
-  steps:
-    - checkout
-    - restore_cache:
-        key: v1-gradle-wrapper-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}
-    - restore_cache:
-        key: v1-gradle-cache-{{ checksum "build.gradle" }}
-    - run:
-        name: Run tests in parallel # See: https://circleci.com/docs/2.0/parallelism-faster-jobs/
-        # Use "./gradlew test" instead if tests are not run in parallel
-        command: |
-          ./gradlew test
-    - save_cache:
-        paths:
-          - ~/.gradle/wrapper
-        key: v1-gradle-wrapper-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}
-    - save_cache:
-        paths:
-          - ~/.gradle/caches
-        key: v1-gradle-cache-{{ checksum "build.gradle" }}
-    - store_test_results:
-        path: build/test-results/test
-    - store_artifacts: # Upload test results for display in Artifacts: https://circleci.com/docs/2.0/artifacts/
-        path: build/test-results/test
-        when: always
-    - run:
-        name: Assemble JAR
-        command: |
-          ./gradlew assemble
-    - store_artifacts:
-        path: build/libs
+    steps:
+      - checkout
+      - restore_cache:
+          key: v1-gradle-wrapper-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}
+      - restore_cache:
+          key: v1-gradle-cache-{{ checksum "build.gradle" }}
+      - run:
+          name: Run tests in parallel # See: https://circleci.com/docs/2.0/parallelism-faster-jobs/
+          # Use "./gradlew test" instead if tests are not run in parallel
+          command: |
+            ./gradlew test
+      - save_cache:
+          paths:
+            - ~/.gradle/wrapper
+          key: v1-gradle-wrapper-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}
+      - save_cache:
+          paths:
+            - ~/.gradle/caches
+          key: v1-gradle-cache-{{ checksum "build.gradle" }}
+      - store_test_results:
+          path: build/test-results/test
+      - store_artifacts: # Upload test results for display in Artifacts: https://circleci.com/docs/2.0/artifacts/
+          path: build/test-results/test
+          when: always
+      - run:
+          name: Assemble JAR
+          command: |
+            ./gradlew assemble
+      - store_artifacts:
+          path: build/libs
+
 workflows:
   version: 2
   workflow:
