@@ -170,7 +170,7 @@ public class AsyncS3Client implements Closeable {
         return Single.create(subscriber -> listObjects(listObjectsRequest, subscriber));
     }
 
-    public Single<SizedInputStream> getObject(String bucketName, CharSequence location) {
+    public Single<GetObjectResponse> getObject(String bucketName, CharSequence location) {
         TextBuilder urlBuilder = TextBuilders.threadLocal();
         urlBuilder.append("/");
         UTF8UrlEncoder.appendEncoded(urlBuilder, location);

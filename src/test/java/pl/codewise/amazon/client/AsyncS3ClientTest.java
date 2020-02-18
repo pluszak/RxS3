@@ -2,10 +2,7 @@ package pl.codewise.amazon.client;
 
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.*;
 import com.googlecode.catchexception.CatchException;
 import com.jayway.awaitility.Awaitility;
 import com.jayway.awaitility.Duration;
@@ -129,7 +126,7 @@ public class AsyncS3ClientTest {
         );
     }
 
-    @Test(enabled = false)
+    @Test
     public void shouldListObjectsInBucket() {
         // When
         Single<ObjectListing> listing = client.listObjects(bucketName);
@@ -141,7 +138,7 @@ public class AsyncS3ClientTest {
                 .isEqualTo(amazonListing);
     }
 
-    @Test(enabled = false)
+    @Test
     public void shouldListObjects() {
         // When
         Single<ObjectListing> listing = client.listObjects(bucketName, "COUNTRY_BY_DATE/2014/");
@@ -153,7 +150,7 @@ public class AsyncS3ClientTest {
                 .isEqualTo(amazonListing);
     }
 
-    @Test(enabled = false)
+    @Test
     public void shouldListObjectsWhenUsingRequest() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
@@ -170,7 +167,7 @@ public class AsyncS3ClientTest {
                 .isEqualTo(amazonListing);
     }
 
-    @Test(enabled = false)
+    @Test
     public void shouldListObjectBatches() {
         // When & Then
         PublishSubject<ObjectListing> inProgressSubject = PublishSubject.create();
@@ -199,7 +196,7 @@ public class AsyncS3ClientTest {
                 .isNotTruncated();
     }
 
-    @Test(enabled = false)
+    @Test
     public void shouldListObjectBatchesWhenStartingWithARequest() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
@@ -221,7 +218,7 @@ public class AsyncS3ClientTest {
                 .isEqualTo(amazonListing).isNotTruncated();
     }
 
-    @Test(enabled = false)
+    @Test
     public void shouldListObjectWithMaxKeysLimit() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
@@ -241,7 +238,7 @@ public class AsyncS3ClientTest {
                 .hasSize(2);
     }
 
-    @Test(enabled = false)
+    @Test
     public void shouldListObjectBatchesWhenUsingRequest() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
@@ -268,7 +265,7 @@ public class AsyncS3ClientTest {
                 .isNotTruncated();
     }
 
-    @Test(enabled = false)
+    @Test
     public void shouldReturnEmptyListingWhenNotTruncated() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
@@ -291,7 +288,7 @@ public class AsyncS3ClientTest {
         assertThat(listing).isEqualTo(amazonListing).isNotNull();
     }
 
-    @Test(enabled = false)
+    @Test
     public void shouldListCommonPrefixes_ContainingFiles() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
@@ -310,7 +307,7 @@ public class AsyncS3ClientTest {
                 .isNotTruncated();
     }
 
-    @Test(enabled = false)
+    @Test
     public void shouldListCommonPrefixesInBatches_ContainingFiles() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
@@ -342,7 +339,7 @@ public class AsyncS3ClientTest {
                 .isNotTruncated();
     }
 
-    @Test(enabled = false)
+    @Test
     public void shouldListCommonPrefixes_ContainingDirectories() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
@@ -361,7 +358,7 @@ public class AsyncS3ClientTest {
                 .isNotTruncated();
     }
 
-    @Test(enabled = false)
+    @Test
     public void shouldListCommonPrefixesInBatches_ContainingDirectories() {
         // Given
         ListObjectsRequest request = new ListObjectsRequest();
@@ -393,7 +390,7 @@ public class AsyncS3ClientTest {
                 .isNotTruncated();
     }
 
-    @Test(enabled = false)
+    @Test
     public void shouldPutObject() throws IOException {
         // Given
         String objectName = RandomStringUtils.randomAlphanumeric(55);
@@ -431,7 +428,7 @@ public class AsyncS3ClientTest {
         assertThat(actual).isEqualTo(data);
     }
 
-    @Test(enabled = false)
+    @Test
     public void shouldGetObject() {
         // Given
         String objectName = RandomStringUtils.randomAlphanumeric(55);
@@ -446,13 +443,43 @@ public class AsyncS3ClientTest {
 
         // When
         InputStream actual = client.getObject(bucketName, objectName)
-                .blockingGet();
+                .blockingGet()
+                .getContent();
 
         // Then
         assertThat(actual).hasContentEqualTo(new ByteArrayInputStream(data));
     }
 
-    @Test(enabled = false)
+    @Test
+    public void shouldReturnObjectMetadataInGetObject() {
+        // Given
+        String objectName = RandomStringUtils.randomAlphanumeric(55);
+        byte[] data = RandomStringUtils.randomAlphanumeric(10 * 1024).getBytes();
+
+        ObjectMetadata metadata = new ObjectMetadata();
+        metadata.setContentLength(data.length);
+        metadata.setContentType("application/octet-stream");
+        metadata.setContentMD5(getBase64EncodedMD5Hash(data));
+
+        PutObjectResult putObjectResult = amazonS3Client
+                .putObject(
+                        bucketName,
+                        objectName,
+                        new ByteArrayInputStream(data),
+                        metadata
+                );
+
+        // When
+        String actual = client.getObject(bucketName, objectName)
+                .blockingGet()
+                .getETag();
+
+        // Then
+        assertThat(actual)
+                .isEqualTo("\"" + putObjectResult.getETag() + "\"");
+    }
+
+    @Test
     public void shouldDeleteObject() {
         // Given
         String objectName = RandomStringUtils.randomAlphanumeric(55);

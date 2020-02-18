@@ -1,6 +1,7 @@
 package pl.codewise.amazon.client.xml;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -19,7 +20,7 @@ public abstract class GenericResponseParser<Context> {
 
     public static final String INPUT_ENCODING = "UTF-8";
 
-    private XmlPullParserFactory pullParserFactory;
+    private final XmlPullParserFactory pullParserFactory;
 
     private final TagHandler<Context> unknownTagHandler;
     private final Map<String, TagHandler<Context>> tagHandlerMap;
@@ -46,7 +47,11 @@ public abstract class GenericResponseParser<Context> {
         }
     }
 
-    public abstract Context parse(HttpResponseStatus status, ByteBuf content) throws IOException;
+    public abstract Context parse(
+            HttpResponseStatus status,
+            HttpHeaders headers,
+            ByteBuf content
+    ) throws IOException;
 
     private void processContents(XmlPullParser parser, Context context) throws XmlPullParserException, IOException {
         ContextStack<Context> handlerStack = ContextStack.<Context>getInstance();
