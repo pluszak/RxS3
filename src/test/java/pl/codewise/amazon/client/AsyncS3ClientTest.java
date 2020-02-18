@@ -33,8 +33,8 @@ public class AsyncS3ClientTest {
 
     private static final Logger LOGGER = getLogger(AsyncS3ClientTest.class);
 
-    private static final String ACCESS_KEY_PROPERTY_NAME = "s3.accessKey";
-    private static final String SECRET_KEY_PROPERTY_NAME = "s3.secretKey";
+    private static final String ACCESS_KEY_PROPERTY_NAME = "AWS_ACCESS_KEY";
+    private static final String SECRET_KEY_PROPERTY_NAME = "AWS_SECRET_KEY";
     private static final String EMPTY_CREDENTIAL = "empty";
 
     private static final String BUCKET_NAME_PROPERTY_NAME = "s3.bucketName";
