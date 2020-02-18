@@ -64,8 +64,15 @@ public class AsyncS3ClientTest {
 
     @BeforeClass(dependsOnMethods = "setLocales")
     public void setUpCredentialsAndBucketName() {
-        String accessKey = System.getProperty(ACCESS_KEY_PROPERTY_NAME, EMPTY_CREDENTIAL);
-        String secretKey = System.getProperty(SECRET_KEY_PROPERTY_NAME, EMPTY_CREDENTIAL);
+        String accessKey = System.getenv(ACCESS_KEY_PROPERTY_NAME);
+        if (accessKey == null) {
+            accessKey = EMPTY_CREDENTIAL;
+        }
+
+        String secretKey = System.getenv(SECRET_KEY_PROPERTY_NAME);
+        if (secretKey == null) {
+            secretKey = EMPTY_CREDENTIAL;
+        }
 
         credentials = new BasicAWSCredentials(accessKey, secretKey);
         amazonS3Client = new AmazonS3Client(credentials);
