@@ -1,6 +1,5 @@
 package pl.codewise.amazon.client;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
@@ -40,9 +39,13 @@ public class SubscriptionCompletionHandler<T> {
             return;
         }
 
-        if (!emitExceptionIfUnsuccessful(response.getStatus(), response.content(), subscriber)) {
+        if (!emitExceptionIfUnsuccessful(response, subscriber)) {
             try {
-                T result = responseParser.parse(response.getStatus(), response.content());
+                T result = responseParser.parse(
+                        response.getStatus(),
+                        response.headers(),
+                        response.content()
+                );
                 subscriber.onSuccess(result);
             } catch (Exception e) {
                 subscriber.onError(e);
@@ -60,10 +63,17 @@ public class SubscriptionCompletionHandler<T> {
         }
     }
 
-    private boolean emitExceptionIfUnsuccessful(HttpResponseStatus status, ByteBuf content, SingleEmitter<?> observer) {
+    private boolean emitExceptionIfUnsuccessful(FullHttpResponse response, SingleEmitter<?> observer) {
+        HttpResponseStatus status = response.getStatus();
         if (!status.equals(HttpResponseStatus.OK) && !status.equals(HttpResponseStatus.NO_CONTENT)) {
             try {
-                observer.onError(errorResponseParser.parse(status, content).build());
+                observer.onError(
+                        errorResponseParser.parse(
+                                status,
+                                response.headers(),
+                                response.content()
+                        ).build()
+                );
             } catch (IOException e) {
                 observer.onError(new RuntimeException("Received unparseable error with code: " + status));
             }

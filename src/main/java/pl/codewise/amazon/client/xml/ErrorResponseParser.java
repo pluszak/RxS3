@@ -2,6 +2,7 @@ package pl.codewise.amazon.client.xml;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
@@ -32,7 +33,7 @@ public class ErrorResponseParser extends GenericResponseParser<AmazonS3Exception
         return exceptionBuilder;
     }
 
-    public AmazonS3ExceptionBuilder parse(HttpResponseStatus status, ByteBuf content) throws IOException {
+    public AmazonS3ExceptionBuilder parse(HttpResponseStatus status, HttpHeaders headers, ByteBuf content) throws IOException {
         try {
             return parseResponse(status, content);
         } finally {
