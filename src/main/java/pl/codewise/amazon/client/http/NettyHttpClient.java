@@ -57,7 +57,7 @@ public class NettyHttpClient implements AutoCloseable {
 
         channelPool = new FixedChannelPool(bootstrap, new AbstractChannelPoolHandler() {
 
-            HttpClientInitializer initializer = new HttpClientInitializer(demultiplexer);
+            HttpClientInitializer initializer = new HttpClientInitializer(demultiplexer, configuration.getRequestTimeoutMillis());
 
             @Override
             public void channelCreated(Channel ch) {
