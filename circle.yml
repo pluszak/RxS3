@@ -19,7 +19,7 @@ jobs:
       - restore_cache:
           key: v1-gradle-cache-{{ checksum "build.gradle" }}
       - run:
-          name: update host file
+          name: update hosts file
           command: |
             echo 127.0.0.1 locals3 | sudo tee -a /etc/hosts
             echo 127.0.0.1 async-client-test.locals3 | sudo tee -a /etc/hosts
@@ -48,6 +48,25 @@ jobs:
           name: Assemble JAR
           command: |
             ./gradlew assemble
+      - persist_to_workspace:
+          root: workspace
+            paths:
+              - .
+  releae:
+    environment:
+      _JAVA_OPTIONS: "-Xmx3g"
+      GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
+
+    docker:
+      - image: circleci/openjdk:8u242-jdk
+
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Run tests
+          command:
+            ./gradlew release
       - store_artifacts:
           path: build/libs
 
@@ -56,3 +75,7 @@ workflows:
   workflow:
     jobs:
       - build
+      - release
+        requires:
+          - build1
+
