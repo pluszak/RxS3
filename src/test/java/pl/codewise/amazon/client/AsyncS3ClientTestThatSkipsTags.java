@@ -5,7 +5,7 @@ import org.testng.annotations.Test;
 
 import java.util.Arrays;
 
-@Test(enabled = false)
+@Test
 public class AsyncS3ClientTestThatSkipsTags extends AsyncS3ClientTest {
 
     @BeforeClass

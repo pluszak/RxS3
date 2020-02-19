@@ -3,6 +3,7 @@ package pl.codewise.amazon.client;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.*;
+import com.github.tomakehurst.wiremock.WireMockServer;
 import com.googlecode.catchexception.CatchException;
 import com.jayway.awaitility.Awaitility;
 import com.jayway.awaitility.Duration;
@@ -26,6 +27,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.slf4j.LoggerFactory.getLogger;
 import static pl.codewise.amazon.client.AsyncS3ClientAssertions.assertThat;
 
@@ -506,6 +508,42 @@ public class AsyncS3ClientTest {
         // Then
         CatchException.catchException(amazonS3Client).getObject(bucketName, objectName);
         assertThat(CatchException.<Exception>caughtException()).hasMessageContaining("The specified key does not exist");
+    }
+
+    @Test
+    public void shouldTimeoutAfterOneSecond_Read() {
+        // Given
+        WireMockServer wireMockServer = new WireMockServer();
+        wireMockServer.stubFor(any(anyUrl())
+                .willReturn(
+                        aResponse()
+                                .withFixedDelay(10000)
+                                .withStatus(200)
+                )
+        );
+        wireMockServer.start();
+
+        ClientConfiguration configuration = ClientConfiguration
+                .builder()
+                .connectTo("locals3:" + wireMockServer.port())
+                .timeoutRequestsAfter(1)
+                .useCredentials(credentials)
+                .build();
+
+        AsyncS3Client client = new AsyncS3Client(
+                configuration,
+                HttpClientFactory.defaultFactory()
+        );
+
+        // When
+        TestObserver<GetObjectResponse> testObserver = client
+                .getObject("test", "foobar")
+                .test();
+
+        // Then
+        testObserver.awaitTerminalEvent();
+        testObserver.assertError(IOException.class);
+        testObserver.assertErrorMessage("Channel become inactive");
     }
 
     private String getBase64EncodedMD5Hash(byte[] packet) {
