@@ -52,7 +52,7 @@ jobs:
           root: workspace
             paths:
               - .
-  releae:
+  release:
     environment:
       _JAVA_OPTIONS: "-Xmx3g"
       GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
