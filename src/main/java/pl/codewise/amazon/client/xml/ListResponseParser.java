@@ -3,6 +3,7 @@ package pl.codewise.amazon.client.xml;
 import com.amazonaws.services.s3.model.ObjectListing;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.ReferenceCountUtil;
 import org.xmlpull.v1.XmlPullParserFactory;
@@ -24,7 +25,7 @@ public class ListResponseParser extends GenericResponseParser<ObjectListing> {
         super(pullParserFactory, ListObjectsTagHandler.UNKNOWN, tagHandlerMap);
     }
 
-    public ObjectListing parse(HttpResponseStatus status, ByteBuf content) throws IOException {
+    public ObjectListing parse(HttpResponseStatus status, HttpHeaders headers, ByteBuf content) throws IOException {
         try {
             ObjectListing listing = new ObjectListing();
             parse(new ByteBufInputStream(content), listing);
