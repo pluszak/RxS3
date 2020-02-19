@@ -8,8 +8,8 @@ public class ClientConfigurationBuilder {
 
     public static final String DEFAULT_S3_LOCATION = "s3.amazonaws.com";
 
-    public static final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 1000;
-    public static final int DEFAULT_REQUEST_TIMEOUT_MILLIS = 1000;
+    public static final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 60_000;
+    public static final int DEFAULT_REQUEST_TIMEOUT_MILLIS = 60_000;
 
     public static final int DEFAULT_WORKER_THREAD_COUNT = 0;
 
@@ -101,9 +101,19 @@ public class ClientConfigurationBuilder {
     }
 
     public ClientConfiguration build() {
-        return new ClientConfiguration(credentialsProvider, s3Location,
-                connectionTimeoutMillis, requestTimeoutMillis, workerThreadCount,
-                maxConnections, maxPendingAcquires, acquireTimeoutMillis,
-                skipParsingOwner, skipParsingETag, skipParsingLastModified, skipParsingStorageClass);
+        return new ClientConfiguration(
+                credentialsProvider,
+                s3Location,
+                connectionTimeoutMillis,
+                requestTimeoutMillis,
+                workerThreadCount,
+                maxConnections,
+                maxPendingAcquires,
+                acquireTimeoutMillis,
+                skipParsingOwner,
+                skipParsingETag,
+                skipParsingLastModified,
+                skipParsingStorageClass
+        );
     }
 }
