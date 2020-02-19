@@ -21,10 +21,20 @@ public class ClientConfiguration {
     private final boolean skipParsingLastModified;
     private final boolean skipParsingStorageClass;
 
-    public ClientConfiguration(AWSCredentialsProvider credentialsProvider, String s3Location,
-                               int connectionTimeoutMillis, int requestTimeoutMillis, int workerThreadCount,
-                               int maxConnections, int maxPendingAcquires, int acquireTimeoutMillis,
-                               boolean skipParsingOwner, boolean skipParsingETag, boolean skipParsingLastModified, boolean skipParsingStorageClass) {
+    public ClientConfiguration(
+            AWSCredentialsProvider credentialsProvider,
+            String s3Location,
+            int connectionTimeoutMillis,
+            int requestTimeoutMillis,
+            int workerThreadCount,
+            int maxConnections,
+            int maxPendingAcquires,
+            int acquireTimeoutMillis,
+            boolean skipParsingOwner,
+            boolean skipParsingETag,
+            boolean skipParsingLastModified,
+            boolean skipParsingStorageClass
+    ) {
         this.credentialsProvider = credentialsProvider;
         this.s3Location = s3Location;
 
