@@ -19,9 +19,14 @@ jobs:
       - restore_cache:
           key: v1-gradle-cache-{{ checksum "build.gradle" }}
       - run:
-          name: Run tests in parallel # See: https://circleci.com/docs/2.0/parallelism-faster-jobs/
-          # Use "./gradlew test" instead if tests are not run in parallel
+          name: update host file
           command: |
+            echo 127.0.0.1 locals3 | sudo tee -a /etc/hosts
+            echo 127.0.0.1 async-client-test.locals3 | sudo tee -a /etc/hosts
+            cat /etc/hosts
+      - run:
+          name: Run tests
+          command:
             ./gradlew test
       - save_cache:
           paths:
