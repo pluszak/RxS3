@@ -25,6 +25,9 @@ jobs:
             echo 127.0.0.1 async-client-test.locals3 | sudo tee -a /etc/hosts
             cat /etc/hosts
       - run:
+          name: chmod permissions
+          command: chmod +x ./gradlew
+      - run:
           name: Run tests
           command:
             ./gradlew test
