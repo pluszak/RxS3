@@ -50,8 +50,8 @@ jobs:
             ./gradlew assemble
       - persist_to_workspace:
           root: workspace
-            paths:
-              - .
+          paths:
+            - .
   release:
     environment:
       _JAVA_OPTIONS: "-Xmx3g"
