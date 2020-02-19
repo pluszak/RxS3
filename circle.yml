@@ -75,6 +75,6 @@ workflows:
   workflow:
     jobs:
       - build
-      - release
-        requires:
-          - build
+      - release:
+          requires:
+            - build
