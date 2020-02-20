@@ -41,7 +41,7 @@ jobs:
           key: v1-gradle-cache-{{ checksum "build.gradle" }}
       - store_test_results:
           path: build/test-results/test
-      - store_artifacts: # Upload test results for display in Artifacts: https://circleci.com/docs/2.0/artifacts/
+      - store_artifacts:
           path: build/test-results/test
           when: always
       - run:
@@ -49,7 +49,7 @@ jobs:
           command: |
             ./gradlew assemble
       - persist_to_workspace:
-          root: workspace
+          root: .
           paths:
             - .
   release:
@@ -64,9 +64,16 @@ jobs:
       - attach_workspace:
           at: .
       - run:
-          name: Run tests
-          command:
-            ./gradlew release
+          name: Release to Bintray
+          command: |
+            case $RELEASE in
+              release*)
+                ./gradlew release
+              ;;
+              *)
+                echo "No release for you"
+              ;;
+            esac
       - store_artifacts:
           path: build/libs
 

@@ -18,6 +18,7 @@ bintray {
     pkg {
         repo = 'RxS3'
         name = 'RxS3'
+        userOrg = 'kowalczewski'
         desc = 'Lightweight AmazonS3 client '
         websiteUrl = 'http://tkowalcz.github.io/RxS3/'
         vcsUrl = 'https://github.com/tkowalcz/RxS3.git'
