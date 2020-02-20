@@ -8,6 +8,8 @@ import io.netty.buffer.Unpooled;
 import io.reactivex.Completable;
 import io.reactivex.Single;
 import io.reactivex.SingleEmitter;
+import io.reactivex.SingleTransformer;
+import io.reactivex.schedulers.Schedulers;
 import javolution.text.TextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,8 +22,7 @@ import pl.codewise.amazon.client.utils.TextBuilders;
 import pl.codewise.amazon.client.utils.UTF8UrlEncoder;
 import pl.codewise.amazon.client.xml.*;
 
-import java.io.Closeable;
-
+import static pl.codewise.amazon.client.GenericS3RetryTransformer.createTransformerForRetryCount;
 import static pl.codewise.amazon.client.RestUtils.appendQueryString;
 
 /**
@@ -30,11 +31,13 @@ import static pl.codewise.amazon.client.RestUtils.appendQueryString;
  * storage (e.g. StringBuilder) after call to AsyncS3Client method returns.
  */
 @SuppressWarnings("UnusedDeclaration")
-public class AsyncS3Client implements Closeable {
+public class AsyncS3Client implements AutoCloseable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AsyncS3Client.class);
 
     private final NettyHttpClient httpClient;
+    @SuppressWarnings("rawtypes")
+    private final SingleTransformer retryTransformer;
 
     private final ListResponseParser listResponseParser;
     private final ErrorResponseParser errorResponseParser;
@@ -43,6 +46,11 @@ public class AsyncS3Client implements Closeable {
 
     public AsyncS3Client(ClientConfiguration configuration, NettyHttpClient httpClient) {
         this.httpClient = httpClient;
+
+        this.retryTransformer = createTransformerForRetryCount(
+                configuration.getMaxRetries(),
+                Schedulers.computation()
+        );
 
         try {
             XmlPullParserFactory pullParserFactory = XmlPullParserFactory.newInstance();
@@ -108,7 +116,15 @@ public class AsyncS3Client implements Closeable {
     }
 
     public Single<ObjectListing> listObjects(String bucketName, CharSequence prefix) {
-        return Single.create(subscriber -> listObjects(bucketName, prefix, subscriber));
+        return Single.<ObjectListing>create(
+                subscriber -> listObjects(
+                        bucketName,
+                        prefix,
+                        subscriber
+                )
+        ).compose(
+                addRetries()
+        );
     }
 
     private void listNextBatchOfObjects(ObjectListing objectListing, SingleEmitter<ObjectListing> observable) {
@@ -167,7 +183,13 @@ public class AsyncS3Client implements Closeable {
     }
 
     public Single<ObjectListing> listObjects(ListObjectsRequest listObjectsRequest) {
-        return Single.create(subscriber -> listObjects(listObjectsRequest, subscriber));
+        return Single.<ObjectListing>create(
+                subscriber -> listObjects(
+                        listObjectsRequest,
+                        subscriber)
+        ).compose(
+                addRetries()
+        );
     }
 
     public Single<GetObjectResponse> getObject(String bucketName, CharSequence location) {
@@ -209,6 +231,19 @@ public class AsyncS3Client implements Closeable {
     }
 
     private <T> Single<T> retrieveResult(Request request, GenericResponseParser<T> responseParser) {
-        return Single.create(emitter -> retrieveResult(request, responseParser, emitter));
+        Single<T> single = Single.create(emitter ->
+                retrieveResult(
+                        request,
+                        responseParser,
+                        emitter
+                )
+        );
+
+        return single.compose(addRetries());
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> SingleTransformer<T, T> addRetries() {
+        return retryTransformer;
     }
 }
