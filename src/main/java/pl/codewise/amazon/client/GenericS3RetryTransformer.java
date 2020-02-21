@@ -36,7 +36,7 @@ public class GenericS3RetryTransformer {
     ) {
         return o -> o
                 .retryWhen(observable ->
-                        observable.zipWith(range(1, maxRetries), Pair::of)
+                        observable.zipWith(range(1, maxRetries + 1), Pair::of)
                                 .flatMap(pair -> {
                                     Throwable throwable = pair.getLeft();
                                     Integer retry = pair.getRight();
@@ -69,7 +69,7 @@ public class GenericS3RetryTransformer {
             }
         }
 
-        if (retry < maxRetries) {
+        if (retry <= maxRetries) {
             if (throwable instanceof IOException) {
                 LOGGER.debug("Retrying ({}) call that failed due to IOException: {}", retry, throwable.getMessage());
                 return true;
@@ -92,6 +92,12 @@ public class GenericS3RetryTransformer {
                 LOGGER.debug("Retrying ({}) call that timed out", retry);
                 return true;
             }
+
+            if (throwable instanceof io.netty.handler.timeout.TimeoutException) {
+                LOGGER.debug("Retrying ({}) call that timed out", retry);
+                return true;
+            }
+
         }
 
         LOGGER.debug("Not retrying ({}) call that failed due to {}", retry, throwable.getMessage());

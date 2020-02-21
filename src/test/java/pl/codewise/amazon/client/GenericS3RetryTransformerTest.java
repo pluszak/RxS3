@@ -1,6 +1,7 @@
 package pl.codewise.amazon.client;
 
 import com.amazonaws.services.s3.model.AmazonS3Exception;
+import io.netty.handler.timeout.ReadTimeoutException;
 import io.reactivex.Single;
 import io.reactivex.observers.TestObserver;
 import io.reactivex.schedulers.TestScheduler;
@@ -19,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class GenericS3RetryTransformerTest extends TestCase {
 
-    private static final int MAX_RETRIES = 4;
+    private static final int MAX_RETRIES = 3;
 
     private final TestScheduler scheduler = new TestScheduler();
 
@@ -116,6 +117,36 @@ public class GenericS3RetryTransformerTest extends TestCase {
         // Given
         Object successObject = new Object();
         Iterator<Object> subscribeActions = Arrays.asList(new AmazonS3Exception("Status Code: 400; Error Code: RequestTimeout"), successObject).iterator();
+
+        Single<Object> observable = Single.create(subscriber -> {
+            Object action = subscribeActions.next();
+            if (action instanceof Exception) {
+                subscriber.onError((Throwable) action);
+            } else {
+                subscriber.onSuccess(action);
+            }
+        });
+
+        // When
+        TestObserver<Object> subscriber = observable
+                .compose(GenericS3RetryTransformer.addRetries(MAX_RETRIES, scheduler))
+                .test();
+
+        // Then
+        scheduler.advanceTimeBy(100, TimeUnit.SECONDS);
+        subscriber.awaitTerminalEvent();
+        subscriber.assertNoErrors();
+        subscriber.assertValue(successObject);
+    }
+
+    @Test
+    public void shouldRetryOnNettyTimeout() {
+        // Given
+        Object successObject = new Object();
+        Iterator<Object> subscribeActions = Arrays.asList(
+                ReadTimeoutException.INSTANCE,
+                successObject
+        ).iterator();
 
         Single<Object> observable = Single.create(subscriber -> {
             Object action = subscribeActions.next();
