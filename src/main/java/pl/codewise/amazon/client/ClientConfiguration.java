@@ -20,7 +20,6 @@ public class ClientConfiguration {
     private final boolean skipParsingETag;
     private final boolean skipParsingLastModified;
     private final boolean skipParsingStorageClass;
-    private final int maxRetries;
 
     public ClientConfiguration(
             AWSCredentialsProvider credentialsProvider,
@@ -34,8 +33,8 @@ public class ClientConfiguration {
             boolean skipParsingOwner,
             boolean skipParsingETag,
             boolean skipParsingLastModified,
-            boolean skipParsingStorageClass,
-            int maxRetries) {
+            boolean skipParsingStorageClass
+    ) {
         this.credentialsProvider = credentialsProvider;
         this.s3Location = s3Location;
 
@@ -51,8 +50,6 @@ public class ClientConfiguration {
         this.skipParsingETag = skipParsingETag;
         this.skipParsingLastModified = skipParsingLastModified;
         this.skipParsingStorageClass = skipParsingStorageClass;
-
-        this.maxRetries = maxRetries;
     }
 
     public AWSCredentialsProvider getCredentialsProvider() {
@@ -101,10 +98,6 @@ public class ClientConfiguration {
 
     public boolean isSkipParsingStorageClass() {
         return skipParsingStorageClass;
-    }
-
-    public int getMaxRetries() {
-        return maxRetries;
     }
 
     public static ClientConfigurationBuilder builder() {
