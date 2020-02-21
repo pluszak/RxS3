@@ -26,12 +26,11 @@ class HttpClientInitializer {
 
     void initChannel(Channel ch) {
         ChannelPipeline p = ch.pipeline();
-        p.addLast(new IdleStateHandler(0, 0, 60));
+        p.addLast(new IdleStateHandler(requestTimeoutMillis, 0, 60));
         p.addLast(new HttpClientCodec());
         p.addLast(new HttpContentDecompressor());
         p.addLast(new HttpObjectAggregator(MAX_REQUEST_SIZE));
         p.addLast(demultiplexer);
-        p.addLast(new ReadTimeoutHandler(requestTimeoutMillis, TimeUnit.MILLISECONDS));
         p.addLast(new InactiveConnectionsHandler());
     }
 }
