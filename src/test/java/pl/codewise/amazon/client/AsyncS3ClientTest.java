@@ -4,6 +4,8 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.*;
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.http.Fault;
+import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import com.googlecode.catchexception.CatchException;
 import com.jayway.awaitility.Awaitility;
 import com.jayway.awaitility.Duration;
@@ -57,11 +59,15 @@ public class AsyncS3ClientTest {
     private AmazonS3Client amazonS3Client;
     private AsyncS3Client client;
 
+    WireMockServer wireMockServer = new WireMockServer();
+
     @BeforeClass
     public void setLocales() {
         TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
         DateTimeZone.setDefault(DateTimeZone.UTC);
         Locale.setDefault(Locale.US);
+
+        wireMockServer.start();
     }
 
     @BeforeClass(dependsOnMethods = "setLocales")
@@ -115,6 +121,8 @@ public class AsyncS3ClientTest {
         US.deleteFromS3(amazonS3Client, bucketName);
         CZ.deleteFromS3(amazonS3Client, bucketName);
         UK.deleteFromS3(amazonS3Client, bucketName);
+
+        wireMockServer.stop();
     }
 
     @BeforeMethod
@@ -513,7 +521,7 @@ public class AsyncS3ClientTest {
     @Test
     public void shouldTimeoutAfterOneSecond_Read() {
         // Given
-        WireMockServer wireMockServer = new WireMockServer();
+        wireMockServer.resetAll();
         wireMockServer.stubFor(any(anyUrl())
                 .willReturn(
                         aResponse()
@@ -521,7 +529,6 @@ public class AsyncS3ClientTest {
                                 .withStatus(200)
                 )
         );
-        wireMockServer.start();
 
         ClientConfiguration configuration = ClientConfiguration
                 .builder()
@@ -544,6 +551,55 @@ public class AsyncS3ClientTest {
         testObserver.awaitTerminalEvent();
         testObserver.assertError(IOException.class);
         testObserver.assertErrorMessage("Channel become inactive");
+    }
+
+    @Test(enabled = false)
+    public void shouldRetryListingObjectsWhenUsingRequest() {
+        // Given
+        wireMockServer.resetAll();
+        wireMockServer.stubFor(any(anyUrl())
+                .inScenario("retries")
+                .whenScenarioStateIs(Scenario.STARTED)
+                .willReturn(
+                        aResponse()
+                                .withFault(Fault.CONNECTION_RESET_BY_PEER)
+                )
+                .willSetStateTo("after-timeout")
+        );
+
+        wireMockServer.stubFor(any(anyUrl())
+                .inScenario("retries")
+                .whenScenarioStateIs("after-timeout")
+                .willReturn(
+                        aResponse()
+                                .proxiedFrom("http://s3.amazonaws.com")
+                )
+        );
+
+        ClientConfiguration configuration = ClientConfiguration
+                .builder()
+                .connectTo("locals3:" + wireMockServer.port())
+                .withRetriesEnabled(1)
+                .useCredentials(credentials)
+                .build();
+
+        AsyncS3Client client = new AsyncS3Client(
+                configuration,
+                HttpClientFactory.defaultFactory()
+        );
+
+        ListObjectsRequest request = new ListObjectsRequest();
+        request.setBucketName(bucketName);
+        request.setPrefix("COUNTRY_BY_DATE/2014/05/");
+
+        // When
+        Single<ObjectListing> listing = client.listObjects(request);
+        ObjectListing amazonListing = amazonS3Client.listObjects(request);
+
+        // Then
+        assertThat(listing)
+                .ignoreFields(fieldsToIgnore)
+                .isEqualTo(amazonListing);
     }
 
     private String getBase64EncodedMD5Hash(byte[] packet) {

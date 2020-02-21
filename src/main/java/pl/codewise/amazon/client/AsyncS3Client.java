@@ -5,10 +5,7 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.reactivex.Completable;
-import io.reactivex.Single;
-import io.reactivex.SingleEmitter;
-import io.reactivex.SingleTransformer;
+import io.reactivex.*;
 import io.reactivex.schedulers.Schedulers;
 import javolution.text.TextBuilder;
 import org.slf4j.Logger;
@@ -116,14 +113,12 @@ public class AsyncS3Client implements AutoCloseable {
     }
 
     public Single<ObjectListing> listObjects(String bucketName, CharSequence prefix) {
-        return Single.<ObjectListing>create(
+        return singleWithRetries(
                 subscriber -> listObjects(
                         bucketName,
                         prefix,
                         subscriber
                 )
-        ).compose(
-                addRetries()
         );
     }
 
@@ -183,12 +178,10 @@ public class AsyncS3Client implements AutoCloseable {
     }
 
     public Single<ObjectListing> listObjects(ListObjectsRequest listObjectsRequest) {
-        return Single.<ObjectListing>create(
+        return singleWithRetries(
                 subscriber -> listObjects(
                         listObjectsRequest,
                         subscriber)
-        ).compose(
-                addRetries()
         );
     }
 
@@ -231,19 +224,19 @@ public class AsyncS3Client implements AutoCloseable {
     }
 
     private <T> Single<T> retrieveResult(Request request, GenericResponseParser<T> responseParser) {
-        Single<T> single = Single.create(emitter ->
+        return singleWithRetries(emitter ->
                 retrieveResult(
                         request,
                         responseParser,
                         emitter
                 )
         );
-
-        return single.compose(addRetries());
     }
 
     @SuppressWarnings("unchecked")
-    private <T> SingleTransformer<T, T> addRetries() {
-        return retryTransformer;
+    private <T> Single<T> singleWithRetries(SingleOnSubscribe<T> source) {
+        return Single
+                .create(source)
+                .compose(retryTransformer);
     }
 }
