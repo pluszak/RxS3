@@ -6,7 +6,6 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.reactivex.*;
-import io.reactivex.schedulers.Schedulers;
 import javolution.text.TextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +18,6 @@ import pl.codewise.amazon.client.utils.TextBuilders;
 import pl.codewise.amazon.client.utils.UTF8UrlEncoder;
 import pl.codewise.amazon.client.xml.*;
 
-import static pl.codewise.amazon.client.GenericS3RetryTransformer.createTransformerForRetryCount;
 import static pl.codewise.amazon.client.RestUtils.appendQueryString;
 
 /**
@@ -41,13 +39,12 @@ public class AsyncS3Client implements AutoCloseable {
 
     private final AWSSignatureCalculatorFactory signatureCalculatorFactory;
 
-    public AsyncS3Client(ClientConfiguration configuration, NettyHttpClient httpClient) {
+    public AsyncS3Client(
+            ClientConfiguration configuration,
+            SingleTransformer retryTransformer,
+            NettyHttpClient httpClient) {
+        this.retryTransformer = retryTransformer;
         this.httpClient = httpClient;
-
-        this.retryTransformer = createTransformerForRetryCount(
-                configuration.getMaxRetries(),
-                Schedulers.computation()
-        );
 
         try {
             XmlPullParserFactory pullParserFactory = XmlPullParserFactory.newInstance();
@@ -62,16 +59,13 @@ public class AsyncS3Client implements AutoCloseable {
         signatureCalculatorFactory = new AWSSignatureCalculatorFactory(configuration.getCredentialsProvider());
     }
 
-    public AsyncS3Client(ClientConfiguration configuration, HttpClientFactory httpClientFactory) {
-        this(configuration, httpClientFactory.getHttpClient(configuration));
-    }
-
     public int acquiredConnections() {
         return httpClient.acquiredConnections();
     }
 
     public Completable putObject(String bucketName, CharSequence key, byte[] data, ObjectMetadata metadata) {
-        return putObject(bucketName, key, Unpooled.wrappedBuffer(data), metadata).ignoreElement();
+        return putObject(bucketName, key, Unpooled.wrappedBuffer(data), metadata)
+                .ignoreElement();
     }
 
     public Single<?> putObject(String bucketName, CharSequence key, ByteBuf data, ObjectMetadata metadata) {
@@ -208,7 +202,8 @@ public class AsyncS3Client implements AutoCloseable {
                 .setSignatureCalculatorFactory(signatureCalculatorFactory)
                 .build();
 
-        return retrieveResult(request, DiscardBytesParser.getInstance()).ignoreElement();
+        return retrieveResult(request, DiscardBytesParser.getInstance())
+                .ignoreElement();
     }
 
     @Override

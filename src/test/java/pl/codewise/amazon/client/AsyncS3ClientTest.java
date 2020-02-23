@@ -103,7 +103,7 @@ public class AsyncS3ClientTest {
             LOGGER.info("Found amazon configuration. Using real S3");
         }
 
-        client = new AsyncS3Client(configuration, HttpClientFactory.defaultFactory());
+        client = S3ClientFactory.createClient(configuration);
         bucketName = System.getProperty(BUCKET_NAME_PROPERTY_NAME, DEFAULT_BUCKET_NAME);
     }
 
@@ -537,10 +537,7 @@ public class AsyncS3ClientTest {
                 .useCredentials(credentials)
                 .build();
 
-        AsyncS3Client client = new AsyncS3Client(
-                configuration,
-                HttpClientFactory.defaultFactory()
-        );
+        AsyncS3Client client = S3ClientFactory.createClient(configuration);
 
         // When
         TestObserver<GetObjectResponse> testObserver = client
@@ -583,10 +580,7 @@ public class AsyncS3ClientTest {
                 .useCredentials(credentials)
                 .build();
 
-        AsyncS3Client client = new AsyncS3Client(
-                configuration,
-                HttpClientFactory.defaultFactory()
-        );
+        S3ClientFactory.createClient(configuration);
 
         ListObjectsRequest request = new ListObjectsRequest();
         request.setBucketName(bucketName);

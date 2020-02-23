@@ -43,7 +43,7 @@ public class GenericS3RetryTransformerTest extends TestCase {
 
         // When
         TestObserver<Object> subscriber = observable
-                .compose(GenericS3RetryTransformer.addRetries(MAX_RETRIES, scheduler))
+                .compose(GenericS3RetryTransformer.forRetries(MAX_RETRIES, scheduler))
                 .test();
 
         // Then
@@ -60,7 +60,7 @@ public class GenericS3RetryTransformerTest extends TestCase {
 
         // When
         TestObserver<Object> subscriber = observable
-                .compose(GenericS3RetryTransformer.addRetries(MAX_RETRIES, scheduler))
+                .compose(GenericS3RetryTransformer.forRetries(MAX_RETRIES, scheduler))
                 .test();
 
         // Then
@@ -86,7 +86,7 @@ public class GenericS3RetryTransformerTest extends TestCase {
 
         // When
         TestObserver<Object> subscriber = observable
-                .compose(GenericS3RetryTransformer.addRetries(MAX_RETRIES, scheduler))
+                .compose(GenericS3RetryTransformer.forRetries(MAX_RETRIES, scheduler))
                 .test();
 
         // Then
@@ -103,7 +103,7 @@ public class GenericS3RetryTransformerTest extends TestCase {
 
         // When
         TestObserver<Object> subscriber = observable
-                .compose(GenericS3RetryTransformer.addRetries(MAX_RETRIES, scheduler))
+                .compose(GenericS3RetryTransformer.forRetries(MAX_RETRIES, scheduler))
                 .test();
 
         // Then
@@ -129,7 +129,7 @@ public class GenericS3RetryTransformerTest extends TestCase {
 
         // When
         TestObserver<Object> subscriber = observable
-                .compose(GenericS3RetryTransformer.addRetries(MAX_RETRIES, scheduler))
+                .compose(GenericS3RetryTransformer.forRetries(MAX_RETRIES, scheduler))
                 .test();
 
         // Then
@@ -159,7 +159,7 @@ public class GenericS3RetryTransformerTest extends TestCase {
 
         // When
         TestObserver<Object> subscriber = observable
-                .compose(GenericS3RetryTransformer.addRetries(MAX_RETRIES, scheduler))
+                .compose(GenericS3RetryTransformer.forRetries(MAX_RETRIES, scheduler))
                 .test();
 
         // Then
@@ -189,7 +189,7 @@ public class GenericS3RetryTransformerTest extends TestCase {
 
         // When
         TestObserver<Object> subscriber = observable
-                .compose(GenericS3RetryTransformer.addRetries(MAX_RETRIES, scheduler))
+                .compose(GenericS3RetryTransformer.forRetries(MAX_RETRIES, scheduler))
                 .test();
 
         // Then
@@ -216,7 +216,7 @@ public class GenericS3RetryTransformerTest extends TestCase {
 
         // When
         TestObserver<Object> subscriber = observable
-                .compose(GenericS3RetryTransformer.addRetries(MAX_RETRIES, scheduler))
+                .compose(GenericS3RetryTransformer.forRetries(MAX_RETRIES, scheduler))
                 .test();
 
         // Then
@@ -243,7 +243,7 @@ public class GenericS3RetryTransformerTest extends TestCase {
 
         // When
         TestObserver<Object> subscriber = observable
-                .compose(GenericS3RetryTransformer.addRetries(MAX_RETRIES, scheduler))
+                .compose(GenericS3RetryTransformer.forRetries(MAX_RETRIES, scheduler))
                 .test();
 
         // Then
@@ -279,7 +279,7 @@ public class GenericS3RetryTransformerTest extends TestCase {
 
         // When
         TestObserver<Object> subscriber = observable
-                .compose(GenericS3RetryTransformer.addRetries(MAX_RETRIES, testScheduler))
+                .compose(GenericS3RetryTransformer.forRetries(MAX_RETRIES, testScheduler))
                 .test();
 
         // Then

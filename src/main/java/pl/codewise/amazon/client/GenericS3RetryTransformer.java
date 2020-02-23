@@ -19,18 +19,7 @@ public class GenericS3RetryTransformer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GenericS3RetryTransformer.class);
 
-    public static SingleTransformer createTransformerForRetryCount(
-            int maxRetries,
-            Scheduler timeoutScheduler
-    ) {
-        if (maxRetries > 0) {
-            return addRetries(maxRetries, timeoutScheduler);
-        }
-
-        return upstream -> upstream;
-    }
-
-    public static <T> SingleTransformer<T, T> addRetries(
+    public static <T> SingleTransformer<T, T> forRetries(
             int maxRetries,
             Scheduler timeoutScheduler
     ) {
