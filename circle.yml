@@ -79,7 +79,10 @@ jobs:
 
 workflows:
   version: 2
-  workflow:
+  just_build:
+    jobs:
+      - build
+  build_and_release:
     jobs:
       - build
       - release:
