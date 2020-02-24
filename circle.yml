@@ -65,15 +65,8 @@ jobs:
           at: .
       - run:
           name: Release to Bintray
-          command: |
-            case $RELEASE in
-              release*)
-                ./gradlew release
-              ;;
-              *)
-                echo "No release for you"
-              ;;
-            esac
+          command:
+            ./gradlew release
       - store_artifacts:
           path: build/libs
 
