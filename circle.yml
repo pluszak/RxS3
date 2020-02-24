@@ -83,3 +83,5 @@ workflows:
           requires:
             - build
       - release
+        requires:
+          - hold
