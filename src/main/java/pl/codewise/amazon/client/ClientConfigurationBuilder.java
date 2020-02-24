@@ -17,6 +17,8 @@ public class ClientConfigurationBuilder {
     public static final int DEFAULT_MAX_PENDING_ACQUIRES = 1000;
     public static final int DEFAULT_ACQUIRE_TIMEOUT_MILLIS = 30000;
 
+    public static final int DEFAULT_MAX_RETRIES = 0;
+
     private String s3Location = DEFAULT_S3_LOCATION;
     private AWSCredentialsProvider credentialsProvider;
 
@@ -33,6 +35,8 @@ public class ClientConfigurationBuilder {
     private boolean skipParsingETag;
     private boolean skipParsingLastModified;
     private boolean skipParsingStorageClass;
+
+    private int maxRetries = DEFAULT_MAX_RETRIES;
 
     public ClientConfigurationBuilder useCredentials(AWSCredentials credentials) {
         this.credentialsProvider = new StaticCredentialsProvider(credentials);
@@ -100,6 +104,11 @@ public class ClientConfigurationBuilder {
         return this;
     }
 
+    public ClientConfigurationBuilder withRetriesEnabled(int maxRetries) {
+        this.maxRetries = maxRetries;
+        return this;
+    }
+
     public ClientConfiguration build() {
         return new ClientConfiguration(
                 credentialsProvider,
@@ -113,7 +122,8 @@ public class ClientConfigurationBuilder {
                 skipParsingOwner,
                 skipParsingETag,
                 skipParsingLastModified,
-                skipParsingStorageClass
+                skipParsingStorageClass,
+                maxRetries
         );
     }
 }

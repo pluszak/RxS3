@@ -5,9 +5,7 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.reactivex.Completable;
-import io.reactivex.Single;
-import io.reactivex.SingleEmitter;
+import io.reactivex.*;
 import javolution.text.TextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,8 +18,6 @@ import pl.codewise.amazon.client.utils.TextBuilders;
 import pl.codewise.amazon.client.utils.UTF8UrlEncoder;
 import pl.codewise.amazon.client.xml.*;
 
-import java.io.Closeable;
-
 import static pl.codewise.amazon.client.RestUtils.appendQueryString;
 
 /**
@@ -30,18 +26,24 @@ import static pl.codewise.amazon.client.RestUtils.appendQueryString;
  * storage (e.g. StringBuilder) after call to AsyncS3Client method returns.
  */
 @SuppressWarnings("UnusedDeclaration")
-public class AsyncS3Client implements Closeable {
+public class AsyncS3Client implements AutoCloseable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AsyncS3Client.class);
 
     private final NettyHttpClient httpClient;
+    @SuppressWarnings("rawtypes")
+    private final SingleTransformer retryTransformer;
 
     private final ListResponseParser listResponseParser;
     private final ErrorResponseParser errorResponseParser;
 
     private final AWSSignatureCalculatorFactory signatureCalculatorFactory;
 
-    public AsyncS3Client(ClientConfiguration configuration, NettyHttpClient httpClient) {
+    public AsyncS3Client(
+            ClientConfiguration configuration,
+            SingleTransformer retryTransformer,
+            NettyHttpClient httpClient) {
+        this.retryTransformer = retryTransformer;
         this.httpClient = httpClient;
 
         try {
@@ -57,16 +59,13 @@ public class AsyncS3Client implements Closeable {
         signatureCalculatorFactory = new AWSSignatureCalculatorFactory(configuration.getCredentialsProvider());
     }
 
-    public AsyncS3Client(ClientConfiguration configuration, HttpClientFactory httpClientFactory) {
-        this(configuration, httpClientFactory.getHttpClient(configuration));
-    }
-
     public int acquiredConnections() {
         return httpClient.acquiredConnections();
     }
 
     public Completable putObject(String bucketName, CharSequence key, byte[] data, ObjectMetadata metadata) {
-        return putObject(bucketName, key, Unpooled.wrappedBuffer(data), metadata).ignoreElement();
+        return putObject(bucketName, key, Unpooled.wrappedBuffer(data), metadata)
+                .ignoreElement();
     }
 
     public Single<?> putObject(String bucketName, CharSequence key, ByteBuf data, ObjectMetadata metadata) {
@@ -108,7 +107,13 @@ public class AsyncS3Client implements Closeable {
     }
 
     public Single<ObjectListing> listObjects(String bucketName, CharSequence prefix) {
-        return Single.create(subscriber -> listObjects(bucketName, prefix, subscriber));
+        return singleWithRetries(
+                subscriber -> listObjects(
+                        bucketName,
+                        prefix,
+                        subscriber
+                )
+        );
     }
 
     private void listNextBatchOfObjects(ObjectListing objectListing, SingleEmitter<ObjectListing> observable) {
@@ -167,7 +172,11 @@ public class AsyncS3Client implements Closeable {
     }
 
     public Single<ObjectListing> listObjects(ListObjectsRequest listObjectsRequest) {
-        return Single.create(subscriber -> listObjects(listObjectsRequest, subscriber));
+        return singleWithRetries(
+                subscriber -> listObjects(
+                        listObjectsRequest,
+                        subscriber)
+        );
     }
 
     public Single<GetObjectResponse> getObject(String bucketName, CharSequence location) {
@@ -193,7 +202,8 @@ public class AsyncS3Client implements Closeable {
                 .setSignatureCalculatorFactory(signatureCalculatorFactory)
                 .build();
 
-        return retrieveResult(request, DiscardBytesParser.getInstance()).ignoreElement();
+        return retrieveResult(request, DiscardBytesParser.getInstance())
+                .ignoreElement();
     }
 
     @Override
@@ -209,6 +219,19 @@ public class AsyncS3Client implements Closeable {
     }
 
     private <T> Single<T> retrieveResult(Request request, GenericResponseParser<T> responseParser) {
-        return Single.create(emitter -> retrieveResult(request, responseParser, emitter));
+        return singleWithRetries(emitter ->
+                retrieveResult(
+                        request,
+                        responseParser,
+                        emitter
+                )
+        );
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> Single<T> singleWithRetries(SingleOnSubscribe<T> source) {
+        return Single
+                .create(source)
+                .compose(retryTransformer);
     }
 }
