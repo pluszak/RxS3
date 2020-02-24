@@ -82,3 +82,5 @@ workflows:
           type: approval
           requires:
             - build
+          jobs:
+            - release
